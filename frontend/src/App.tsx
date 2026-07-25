@@ -12,6 +12,7 @@ import {
 import { CrtOff, CrtOn } from './components/CrtOff';
 import { Icon, type IconName } from './components/icons';
 import { ProfileSheet } from './components/ProfileSheet';
+import { SupportPrompt } from './components/SupportPrompt';
 import { IconButton } from './components/ui';
 import { strings, t } from './i18n';
 import { api } from './lib/api';
@@ -236,6 +237,7 @@ function Shell() {
       )}
 
       {me && <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} onLogout={handleLogout} />}
+      {me && <SupportPrompt />}
       {me && (
         <Suspense fallback={null}>
           <GenerationPill />

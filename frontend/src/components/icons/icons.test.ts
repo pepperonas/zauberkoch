@@ -15,7 +15,7 @@ const EXPECTED = [
   'calendar', 'star', 'starOff', 'history', 'cart', 'sun', 'moon', 'shield', 'user', 'power',
   // actions
   'share', 'copy', 'link', 'edit', 'settings', 'camera', 'trash', 'broom', 'mic', 'dice',
-  'gift', 'ticket', 'tools', 'thumbUp', 'thumbDown', 'image', 'note',
+  'gift', 'ticket', 'heart', 'mail', 'tools', 'thumbUp', 'thumbDown', 'image', 'note',
   // kitchen & bar
   'chefhat', 'pan', 'cocktail', 'glass', 'plate', 'herb', 'bulb',
   // meta stats

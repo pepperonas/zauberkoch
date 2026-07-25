@@ -429,6 +429,18 @@ export const de = {
     offline: 'Du bist offline — Favoriten bleiben lesbar.',
     themeToggle: 'Design umschalten',
   },
+
+  support: {
+    title: 'Schmeckt’s?',
+    body: 'Zauberkoch ist kostenlos und Open Source — ein Hobby-Projekt von mir. Wenn du magst, hilfst du mir mit einer Kleinigkeit weiter:',
+    donate: 'Spendier mir einen Kaffee',
+    feedback: 'Feedback schreiben',
+    review: 'Bei Google bewerten',
+    later: 'Vielleicht später',
+    never: 'Nicht mehr fragen',
+    thanks: 'Danke dir! 🧡',
+    feedbackSubject: 'Feedback zu Zauberkoch',
+  },
 } as const;
 
 export type Dict = typeof de;

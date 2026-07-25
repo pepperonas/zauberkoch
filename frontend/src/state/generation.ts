@@ -8,6 +8,7 @@ import { useSyncExternalStore } from 'react';
 import type { RecipeViewData } from '../components/recipe/RecipeView';
 import { adaptRecipe, streamRecipe, type StreamCallbacks } from '../lib/sse';
 import type { ApiError, GenerateParams, Modus } from '../lib/types';
+import { recordGeneration } from './supportPrompt';
 
 export type GenPhase = 'idle' | 'streaming' | 'done' | 'limit';
 export type GenEvent = 'start' | 'meta' | 'zutat' | 'schritt' | 'tipp' | 'done' | 'saved' | 'error';
@@ -100,6 +101,7 @@ export function startGeneration(runner: Runner, mode: Modus, opts: StartOpts = {
       }),
     onSaved: (info) => {
       set({ phase: 'done', recipeId: info.recipe_id, remaining: info.remaining, lastEvent: 'saved' });
+      recordGeneration(); // feeds the gentle "support Zauberkoch" nudge
       lastOnSaved?.();
     },
     onError: (error) =>
