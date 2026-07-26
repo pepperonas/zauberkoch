@@ -17,15 +17,9 @@ from app.db import get_db
 from app.models import AllowlistEntry, Generation, RateLimit, Recipe, User
 from app.services import ratelimit
 from app.services.limits import get_limits, update_limits
+from app.services.pricing import generation_cost
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
-
-# USD per 1M tokens — keep in sync with scripts/stats.py.
-# claude-sonnet-5 INTRO pricing through 2026-08-31; raise to 3.00/15.00 after.
-PRICE_IN = 2.00
-PRICE_OUT = 10.00
-PRICE_CACHE_READ = PRICE_IN * 0.1
-PRICE_CACHE_WRITE = PRICE_IN * 1.25
 
 
 @router.get("/stats")
@@ -42,12 +36,9 @@ def stats(
     tokens_out = sum(r.output_tokens for r in live)
     cache_read = sum(r.cache_read_tokens for r in live)
     cache_write = sum(r.cache_write_tokens for r in live)
-    cost = (
-        tokens_in / 1e6 * PRICE_IN
-        + tokens_out / 1e6 * PRICE_OUT
-        + cache_read / 1e6 * PRICE_CACHE_READ
-        + cache_write / 1e6 * PRICE_CACHE_WRITE
-    )
+    # Per row, not from the summed tokens: price depends on the row's model and
+    # on the day it ran (Sonnet-5 intro pricing ends 2026-08-31).
+    cost = sum(generation_cost(r) for r in live)
     durations = sorted(r.duration_ms for r in live if r.duration_ms)
 
     users = {u.id: u.email for u in db.execute(select(User)).scalars()}
@@ -74,13 +65,7 @@ def stats(
             continue
         gens_by_day[i] += 1
         user_series[r.user_id][i] += 1
-        if not r.cached:
-            cost_by_day[i] += (
-                r.input_tokens / 1e6 * PRICE_IN
-                + r.output_tokens / 1e6 * PRICE_OUT
-                + r.cache_read_tokens / 1e6 * PRICE_CACHE_READ
-                + r.cache_write_tokens / 1e6 * PRICE_CACHE_WRITE
-            )
+        cost_by_day[i] += generation_cost(r)
     daily = [
         {"day": d.isoformat(), "gens": gens_by_day[i], "cost_usd": round(cost_by_day[i], 3)}
         for i, d in enumerate(day_list)

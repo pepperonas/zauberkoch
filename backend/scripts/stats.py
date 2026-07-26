@@ -11,12 +11,7 @@ from sqlalchemy import func, select
 
 from app.db import SessionLocal
 from app.models import Generation
-
-# USD per 1M tokens — adjust when pricing or model changes
-PRICE_IN = 2.00        # claude-sonnet-5 input (intro pricing through 2026-08-31, then 3.00)
-PRICE_OUT = 10.00      # output (intro; then 15.00)
-PRICE_CACHE_READ = PRICE_IN * 0.1
-PRICE_CACHE_WRITE = PRICE_IN * 1.25
+from app.services.pricing import generation_cost, is_priced
 
 
 def main() -> int:
@@ -36,12 +31,9 @@ def main() -> int:
         tokens_out = sum(r.output_tokens for r in live)
         cache_read = sum(r.cache_read_tokens for r in live)
         cache_write = sum(r.cache_write_tokens for r in live)
-        cost = (
-            tokens_in / 1e6 * PRICE_IN
-            + tokens_out / 1e6 * PRICE_OUT
-            + cache_read / 1e6 * PRICE_CACHE_READ
-            + cache_write / 1e6 * PRICE_CACHE_WRITE
-        )
+        # Per row: the price depends on the model and on the day it ran.
+        cost = sum(generation_cost(r) for r in live)
+        unpriced = sorted({r.model for r in live if not is_priced(r.model)})
         durations = sorted(r.duration_ms for r in live if r.duration_ms)
         p50 = durations[len(durations) // 2] if durations else 0
 
@@ -51,6 +43,8 @@ def main() -> int:
               f"({0 if not live else round(100 * sum(1 for r in live if r.cache_read_tokens > 0) / len(live))}% of live calls hit)")
         print(f"tokens:          in {tokens_in:,} / out {tokens_out:,}")
         print(f"est. cost:       ${cost:.2f}")
+        if unpriced:
+            print(f"  ^ estimated at Sonnet standard rates, no price table for: {', '.join(unpriced)}")
         print(f"median duration: {p50/1000:.1f}s")
 
         by_user = db.execute(
