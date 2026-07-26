@@ -1,0 +1,20 @@
+{#- Welcome after confirmed registration. Vars: name, app_url, repo_url. -#}
+{% extends "_layout.html.j2" %}
+{% import "_macros.html.j2" as m %}
+{% block title %}Willkommen bei Zauberkoch{% endblock %}
+{% block preheader %}Deine E-Mail ist bestätigt — der Zauberkoch kann jetzt für dich zaubern.{% endblock %}
+{% block heading %}Willkommen{% if name %}, {{ name }}{% endif %}! <span style="color:#f0b429;">&#10022;</span>{% endblock %}
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:0 40px 8px 40px;">
+    <p class="zk-text" style="margin:0 0 12px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; color:#e0e5da;">
+      Deine E-Mail ist bestätigt und dein Konto ist aktiv. Wähle Küche, Geschmack und was dein Kühlschrank hergibt — der Zauberkoch schreibt dir ein Rezept auf Kochbuch-Niveau, live Zutat für Zutat.
+    </p>
+    <p class="zk-muted" style="margin:0 0 4px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.6; color:#c3c9bb;">
+      Ein paar Ideen für den Anfang: ein 3-Schritt-Wizard, „Überrasch mich", ein Kühlschrank-Scan per Foto und ein Wochenplaner mit automatischer Einkaufsliste.
+    </p>
+  </td>
+</tr></table>
+{{ m.cta(app_url, "Jetzt zaubern") }}
+{{ m.note("Zauberkoch ist kostenlos und Open Source. Schau gern rein oder trag etwas bei: <a href=\"" ~ repo_url ~ "\" class=\"zk-link\" style=\"color:#a0cfd3; text-decoration:underline;\">" ~ repo_url ~ "</a>") }}
+{% endblock %}

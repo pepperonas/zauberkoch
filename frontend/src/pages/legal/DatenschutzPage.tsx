@@ -7,7 +7,7 @@ export function DatenschutzPage() {
   return (
     <div className="legal">
       <h1>Datenschutzerklärung</h1>
-      <p>Stand: 12. Juli 2026</p>
+      <p>Stand: 26. Juli 2026</p>
 
       <h2>1. Verantwortlicher</h2>
       <p>
@@ -60,7 +60,19 @@ export function DatenschutzPage() {
         . Bei Einladung durch andere Nutzer speichern wir deine E-Mail-Adresse in einer Freischaltliste.
       </p>
 
-      <h2>6. KI-Verarbeitung (Anthropic)</h2>
+      <h2>6. Registrierung mit E-Mail und Passwort</h2>
+      <p>
+        Alternativ kannst du dich mit E-Mail-Adresse und Passwort registrieren. Wir speichern deine
+        E-Mail-Adresse sowie dein Passwort ausschließlich als <strong>kryptografischen Hash</strong>{' '}
+        (scrypt mit Zufalls-Salt) — dein Klartext-Passwort wird nie gespeichert (Art. 6 Abs. 1 lit. b DSGVO).
+        Zur Bestätigung deiner Adresse und zum Zurücksetzen des Passworts versenden wir zeitlich befristete,
+        signierte Links per E-Mail; bis zur Bestätigung bleibt das Konto inaktiv. Der E-Mail-Versand erfolgt
+        über unseren Mail-Anbieter Hostinger (Absender <em>support@celox.io</em>). Bei jeder Neuregistrierung
+        wird der Betreiber datenminimal benachrichtigt (E-Mail-Adresse, Name sofern angegeben, Anmeldemethode,
+        Browsersprache, Zeitpunkt) — eine IP-Adresse wird dabei nicht übermittelt.
+      </p>
+
+      <h2>7. KI-Verarbeitung (Anthropic)</h2>
       <p>
         Zur Rezept-Erzeugung übermitteln wir deine Eingaben — gewählte Küche, Geschmacksrichtungen,
         Rahmenbedingungen, angegebene Zutaten/Vorräte sowie optional ein von dir aufgenommenes
@@ -73,7 +85,7 @@ export function DatenschutzPage() {
         <strong>nicht gespeichert</strong>. Bitte fotografiere keine Personen oder sensiblen Dokumente.
       </p>
 
-      <h2>7. Inhalte deines Kontos</h2>
+      <h2>8. Inhalte deines Kontos</h2>
       <p>
         Generierte Rezepte, Favoriten, Notizen, Feedback, Wochenpläne, Einkaufslisten, Vorräte und
         Einstellungen speichern wir, solange dein Konto besteht (Art. 6 Abs. 1 lit. b DSGVO). Zur
@@ -81,7 +93,7 @@ export function DatenschutzPage() {
         (Token-Verbrauch ohne Inhaltsdaten).
       </p>
 
-      <h2>8. Geteilte Rezepte und Galerie</h2>
+      <h2>9. Geteilte Rezepte und Galerie</h2>
       <p>
         Wenn du ein Rezept teilst, ist es über den erzeugten Link ohne Anmeldung abrufbar (ohne Nennung
         deines Namens). Aktivierst du zusätzlich die öffentliche Galerie, erscheint das Rezept auf der
@@ -89,14 +101,14 @@ export function DatenschutzPage() {
         dadurch ungültig.
       </p>
 
-      <h2>9. Empfänger und Hosting</h2>
+      <h2>10. Empfänger und Hosting</h2>
       <p>
         Die Anwendung läuft auf einem von uns administrierten Server in der EU (Hostinger International
         Ltd. als Infrastruktur-Anbieter). Eine Weitergabe personenbezogener Daten an sonstige Dritte findet
         nicht statt, außer wir sind gesetzlich dazu verpflichtet.
       </p>
 
-      <h2>10. Deine Rechte</h2>
+      <h2>11. Deine Rechte</h2>
       <p>
         Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17),
         Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Zur
@@ -107,7 +119,7 @@ export function DatenschutzPage() {
         Informationsfreiheit.
       </p>
 
-      <h2>11. Änderungen</h2>
+      <h2>12. Änderungen</h2>
       <p>
         Wir passen diese Erklärung an, wenn sich die App oder die Rechtslage ändert. Es gilt die jeweils
         hier veröffentlichte Fassung.

@@ -1,0 +1,18 @@
+{#- Password reset. Vars: name, reset_url, valid_hours. -#}
+{% extends "_layout.html.j2" %}
+{% import "_macros.html.j2" as m %}
+{% block title %}Passwort zurücksetzen bei Zauberkoch{% endblock %}
+{% block preheader %}Setze dein Passwort mit einem Klick zurück — der Link ist {{ valid_hours }} Stunde(n) gültig.{% endblock %}
+{% block heading %}Passwort zurücksetzen <span style="color:#f0b429;">&#128273;</span>{% endblock %}
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:0 40px 8px 40px;">
+    <p class="zk-text" style="margin:0 0 12px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; color:#e0e5da;">
+      Hallo{% if name %} {{ name }}{% endif %}, du hast angefragt, dein Passwort zurückzusetzen. Klicke auf den Button, um ein neues Passwort zu vergeben.
+    </p>
+  </td>
+</tr></table>
+{{ m.cta(reset_url, "Neues Passwort setzen") }}
+{{ m.fallback(reset_url, "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:") }}
+{{ m.note("Der Link ist <strong style=\"color:#e0e5da;\">" ~ valid_hours ~ " Stunde(n)</strong> gültig und kann nur einmal verwendet werden. <strong style=\"color:#e0e5da;\">Hast du das nicht angefordert?</strong> Dann ignoriere diese E-Mail — dein Passwort bleibt unverändert. Aus Sicherheitsgründen geben wir nie preis, ob zu einer Adresse ein Konto existiert.") }}
+{% endblock %}

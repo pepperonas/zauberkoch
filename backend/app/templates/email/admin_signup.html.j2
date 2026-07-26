@@ -1,0 +1,19 @@
+{#- Operator notification for a new registration. Vars: email, name, method,
+    language, when. Data-minimal (no IP). -#}
+{% extends "_layout.html.j2" %}
+{% block title %}Neue Registrierung bei Zauberkoch{% endblock %}
+{% block preheader %}{{ email }} hat sich registriert.{% endblock %}
+{% block heading %}Neue Registrierung <span style="color:#f0b429;">&#128276;</span>{% endblock %}
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:0 40px 32px 40px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.6;">
+      <tr><td style="padding:6px 0; color:#8a917f; width:150px;">E-Mail</td><td style="padding:6px 0; color:#e0e5da;">{{ email }}</td></tr>
+      <tr><td style="padding:6px 0; color:#8a917f;">Name</td><td style="padding:6px 0; color:#e0e5da;">{{ name }}</td></tr>
+      <tr><td style="padding:6px 0; color:#8a917f;">Methode</td><td style="padding:6px 0; color:#e0e5da;">{{ method }}</td></tr>
+      <tr><td style="padding:6px 0; color:#8a917f;">Sprache</td><td style="padding:6px 0; color:#e0e5da;">{{ language }}</td></tr>
+      <tr><td style="padding:6px 0; color:#8a917f;">Zeitpunkt</td><td style="padding:6px 0; color:#e0e5da;">{{ when }}</td></tr>
+    </table>
+  </td>
+</tr></table>
+{% endblock %}

@@ -1,143 +1,18 @@
-{#- Zauberkoch double-opt-in verification mail. Table-based, inline styles,
-    VML button for Outlook, dark-theme brand, image-off safe. Vars: name,
-    verify_url, valid_hours. -#}
-<!DOCTYPE html>
-<html lang="de" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-  <meta name="color-scheme" content="dark light">
-  <meta name="supported-color-schemes" content="dark light">
-  <title>Bestätige deine E-Mail für Zauberkoch</title>
-  <!--[if mso]>
-  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
-  <![endif]-->
-  <style>
-    /* progressive enhancement only — every element is also styled inline */
-    :root { color-scheme: dark light; supported-color-schemes: dark light; }
-    body { margin: 0; padding: 0; width: 100% !important; }
-    a { text-decoration: none; }
-    .zk-link { color: #a0cfd3; }
-    @media only screen and (max-width: 600px) {
-      .zk-container { width: 100% !important; }
-      .zk-pad { padding-left: 24px !important; padding-right: 24px !important; }
-      .zk-h1 { font-size: 24px !important; }
-      .zk-cta a { display: block !important; width: auto !important; }
-    }
-    /* keep the dark palette when a client tries to auto-invert (Gmail) */
-    [data-ogsc] .zk-body { background: #11150f !important; }
-    [data-ogsc] .zk-card { background: #1a1f18 !important; }
-    [data-ogsc] .zk-text { color: #e0e5da !important; }
-    [data-ogsc] .zk-muted { color: #c3c9bb !important; }
-    [data-ogsc] .zk-cta-btn { background: #96d98d !important; color: #003911 !important; }
-  </style>
-</head>
-<body class="zk-body" style="margin:0; padding:0; background-color:#11150f; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
-  <!-- preheader (hidden) -->
-  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#11150f; opacity:0;">
-    Nur noch ein Klick — bestätige deine E-Mail und der Zauberkoch kann loslegen.
-    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
-  </div>
-
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#11150f" style="background-color:#11150f;">
-    <tr>
-      <td align="center" style="padding:32px 16px;">
-
-        <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-        <table role="presentation" class="zk-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
-
-          <!-- header / brand -->
-          <tr>
-            <td align="center" style="padding:8px 0 24px 0;">
-              <img src="https://zauberkoch.de/apple-touch-icon.png" width="64" height="64" alt="Zauberkoch"
-                   style="display:block; width:64px; height:64px; border-radius:14px; border:0; outline:none; text-decoration:none;">
-              <div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:26px; font-weight:800; line-height:1.2; color:#e0e5da; letter-spacing:-0.02em; padding-top:12px;">
-                Zauber<span style="color:#96d98d;">koch</span>
-              </div>
-            </td>
-          </tr>
-
-          <!-- content card -->
-          <tr>
-            <td class="zk-card" bgcolor="#1a1f18" style="background-color:#1a1f18; border:1px solid #282e26; border-radius:16px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td class="zk-pad" style="padding:40px 40px 8px 40px;">
-                    <h1 class="zk-h1 zk-text" style="margin:0 0 16px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:28px; line-height:1.25; font-weight:800; color:#e0e5da; letter-spacing:-0.02em;">
-                      Hallo{% if name %} {{ name }}{% endif %}, willkommen! <span style="color:#f0b429;">&#10022;</span>
-                    </h1>
-                    <p class="zk-text" style="margin:0 0 12px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; color:#e0e5da;">
-                      Schön, dass du dabei bist. Bestätige nur noch kurz deine E-Mail-Adresse — danach zaubert der Zauberkoch dir Rezepte und Drinks auf Kochbuch-Niveau, live Zutat für Zutat.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- CTA button (bulletproof) -->
-                <tr>
-                  <td class="zk-cta zk-pad" align="center" style="padding:20px 40px 8px 40px;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ verify_url }}" style="height:52px;v-text-anchor:middle;width:260px;" arcsize="24%" stroke="f" fillcolor="#96d98d">
-                      <w:anchorlock/>
-                      <center style="color:#003911;font-family:'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:bold;">E-Mail bestätigen</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-- -->
-                    <a href="{{ verify_url }}" class="zk-cta-btn"
-                       style="background-color:#96d98d; color:#003911; display:inline-block; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; font-weight:700; line-height:52px; text-align:center; text-decoration:none; width:260px; border-radius:12px; -webkit-text-size-adjust:none;">
-                      E-Mail bestätigen
-                    </a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-
-                <!-- fallback link -->
-                <tr>
-                  <td class="zk-pad" style="padding:8px 40px 24px 40px;">
-                    <p class="zk-muted" style="margin:0 0 8px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; color:#c3c9bb;">
-                      Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:
-                    </p>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td bgcolor="#12160f" style="background-color:#12160f; border:1px solid #282e26; border-radius:10px; padding:12px 14px; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; word-break:break-all;">
-                          <a href="{{ verify_url }}" class="zk-link" style="color:#a0cfd3; text-decoration:underline; word-break:break-all;">{{ verify_url }}</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- validity + not-you note -->
-                <tr>
-                  <td class="zk-pad" style="padding:0 40px 40px 40px; border-top:1px solid #282e26;">
-                    <p class="zk-muted" style="margin:20px 0 0 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#c3c9bb;">
-                      Der Link ist <strong style="color:#e0e5da;">{{ valid_hours }} Stunden</strong> gültig. Hast du dich nicht bei Zauberkoch registriert? Dann ignoriere diese E-Mail einfach — ohne Bestätigung wird kein Konto angelegt.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- footer -->
-          <tr>
-            <td class="zk-pad" style="padding:28px 24px 8px 24px;">
-              <p class="zk-muted" style="margin:0 0 6px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#8a917f; text-align:center;">
-                Zauberkoch · Martin Pfeffer · Flughafenstraße 24 · 12053 Berlin · <a href="mailto:martin.pfeffer@celox.io" class="zk-link" style="color:#8a917f; text-decoration:underline;">martin.pfeffer@celox.io</a>
-              </p>
-              <p class="zk-muted" style="margin:0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#8a917f; text-align:center;">
-                &copy; 2026 Martin Pfeffer | celox.io
-              </p>
-            </td>
-          </tr>
-
-        </table>
-        <!--[if mso]></td></tr></table><![endif]-->
-
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+{#- Double-opt-in verification. Vars: name, verify_url, valid_hours. -#}
+{% extends "_layout.html.j2" %}
+{% import "_macros.html.j2" as m %}
+{% block title %}Bestätige deine E-Mail für Zauberkoch{% endblock %}
+{% block preheader %}Nur noch ein Klick — bestätige deine E-Mail und der Zauberkoch kann loslegen.{% endblock %}
+{% block heading %}Hallo{% if name %} {{ name }}{% endif %}, willkommen! <span style="color:#f0b429;">&#10022;</span>{% endblock %}
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:0 40px 8px 40px;">
+    <p class="zk-text" style="margin:0 0 12px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; color:#e0e5da;">
+      Schön, dass du dabei bist. Bestätige nur noch kurz deine E-Mail-Adresse — danach zaubert der Zauberkoch dir Rezepte und Drinks auf Kochbuch-Niveau, live Zutat für Zutat.
+    </p>
+  </td>
+</tr></table>
+{{ m.cta(verify_url, "E-Mail bestätigen") }}
+{{ m.fallback(verify_url, "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:") }}
+{{ m.note("Der Link ist <strong style=\"color:#e0e5da;\">" ~ valid_hours ~ " Stunden</strong> gültig. Hast du dich nicht bei Zauberkoch registriert? Dann ignoriere diese E-Mail einfach — ohne Bestätigung wird kein Konto angelegt.") }}
+{% endblock %}

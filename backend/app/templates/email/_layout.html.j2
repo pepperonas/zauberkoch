@@ -1,0 +1,90 @@
+{#- Shared Zauberkoch email scaffold: dark brand, table-based, inline styles,
+    image-off safe, Gmail auto-invert guards. Children override `title`,
+    `preheader`, `heading`, `content`. -#}
+<!DOCTYPE html>
+<html lang="de" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <meta name="color-scheme" content="dark light">
+  <meta name="supported-color-schemes" content="dark light">
+  <title>{% block title %}Zauberkoch{% endblock %}</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    :root { color-scheme: dark light; supported-color-schemes: dark light; }
+    body { margin: 0; padding: 0; width: 100% !important; }
+    a { text-decoration: none; }
+    .zk-link { color: #a0cfd3; }
+    @media only screen and (max-width: 600px) {
+      .zk-container { width: 100% !important; }
+      .zk-pad { padding-left: 24px !important; padding-right: 24px !important; }
+      .zk-h1 { font-size: 24px !important; }
+      .zk-cta a { display: block !important; width: auto !important; }
+    }
+    [data-ogsc] .zk-body { background: #11150f !important; }
+    [data-ogsc] .zk-card { background: #1a1f18 !important; }
+    [data-ogsc] .zk-text { color: #e0e5da !important; }
+    [data-ogsc] .zk-muted { color: #c3c9bb !important; }
+    [data-ogsc] .zk-cta-btn { background: #96d98d !important; color: #003911 !important; }
+  </style>
+</head>
+<body class="zk-body" style="margin:0; padding:0; background-color:#11150f; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#11150f; opacity:0;">
+    {% block preheader %}{% endblock %}
+    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#11150f" style="background-color:#11150f;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" class="zk-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+          <tr>
+            <td align="center" style="padding:8px 0 24px 0;">
+              <img src="https://zauberkoch.de/apple-touch-icon.png" width="64" height="64" alt="Zauberkoch"
+                   style="display:block; width:64px; height:64px; border-radius:14px; border:0; outline:none; text-decoration:none;">
+              <div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:26px; font-weight:800; line-height:1.2; color:#e0e5da; letter-spacing:-0.02em; padding-top:12px;">
+                Zauber<span style="color:#96d98d;">koch</span>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="zk-card" bgcolor="#1a1f18" style="background-color:#1a1f18; border:1px solid #282e26; border-radius:16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="zk-pad" style="padding:40px 40px 8px 40px;">
+                    <h1 class="zk-h1 zk-text" style="margin:0 0 16px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:28px; line-height:1.25; font-weight:800; color:#e0e5da; letter-spacing:-0.02em;">
+                      {% block heading %}{% endblock %}
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <tr>
+            <td class="zk-pad" style="padding:28px 24px 8px 24px;">
+              <p class="zk-muted" style="margin:0 0 6px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#8a917f; text-align:center;">
+                Zauberkoch · Martin Pfeffer · Flughafenstraße 24 · 12053 Berlin · <a href="mailto:martin.pfeffer@celox.io" class="zk-link" style="color:#8a917f; text-decoration:underline;">martin.pfeffer@celox.io</a>
+              </p>
+              <p class="zk-muted" style="margin:0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#8a917f; text-align:center;">
+                &copy; 2026 Martin Pfeffer | celox.io
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

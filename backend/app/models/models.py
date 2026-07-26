@@ -25,10 +25,18 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    google_sub: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # Google account id — NULL for email/password-only users. Unique allows
+    # multiple NULLs in SQLite, which is exactly what we want here.
+    google_sub: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255), default="")
     picture_url: Mapped[str] = mapped_column(String(1024), default="")
+    # Email/password auth (both NULL for Google-only accounts). scrypt hash.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Set once the address is confirmed via double opt-in. A password account
+    # stays inactive (login refused) until this is set; Google accounts are
+    # created already-verified (Google vouches for the address).
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     adult_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     preferences_json: Mapped[str] = mapped_column(Text, default="{}")
     # Per-user daily generation cap. NULL = fall back to the global default

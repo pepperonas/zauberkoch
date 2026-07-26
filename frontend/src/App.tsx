@@ -55,6 +55,8 @@ const AdminPage = lazyPage('admin', () => import('./pages/AdminPage').then((m) =
 const ImpressumPage = lazyPage('impressum', () => import('./pages/legal/ImpressumPage').then((m) => ({ default: m.ImpressumPage })));
 const DatenschutzPage = lazyPage('datenschutz', () => import('./pages/legal/DatenschutzPage').then((m) => ({ default: m.DatenschutzPage })));
 const TermsPage = lazyPage('terms', () => import('./pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })));
+const VerifyEmailPage = lazyPage('verify', () => import('./pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage })));
+const ResetPasswordPage = lazyPage('reset', () => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 // Lazy on purpose: keeps motion-dom's full engine out of the entry chunk
 // (a component imported by the entry hoists its whole dep graph there).
 const GenerationPill = lazyPage('genpill', () =>
@@ -312,6 +314,9 @@ export const router = createBrowserRouter([
       { path: '/impressum', element: <ImpressumPage /> },
       { path: '/datenschutz', element: <DatenschutzPage /> },
       { path: '/nutzungsbedingungen', element: <TermsPage /> },
+      // Email/password auth landings — public (no session yet).
+      { path: '/bestaetigen', element: <VerifyEmailPage /> },
+      { path: '/passwort-zuruecksetzen', element: <ResetPasswordPage /> },
       // Gated — RequireAuth swaps in the landing page when signed out.
       {
         element: <RequireAuth />,

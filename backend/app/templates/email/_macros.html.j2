@@ -1,0 +1,46 @@
+{#- Reusable, bulletproof email fragments (Outlook VML + non-mso fallback). -#}
+
+{%- macro cta(url, label) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-cta zk-pad" align="center" style="padding:20px 40px 8px 40px;">
+    <!--[if mso]>
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ url }}" style="height:52px;v-text-anchor:middle;width:260px;" arcsize="24%" stroke="f" fillcolor="#96d98d">
+      <w:anchorlock/>
+      <center style="color:#003911;font-family:'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:bold;">{{ label }}</center>
+    </v:roundrect>
+    <![endif]-->
+    <!--[if !mso]><!-- -->
+    <a href="{{ url }}" class="zk-cta-btn"
+       style="background-color:#96d98d; color:#003911; display:inline-block; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; font-weight:700; line-height:52px; text-align:center; text-decoration:none; width:260px; border-radius:12px; -webkit-text-size-adjust:none;">
+      {{ label }}
+    </a>
+    <!--<![endif]-->
+  </td>
+</tr></table>
+{%- endmacro -%}
+
+{%- macro fallback(url, intro) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:8px 40px 24px 40px;">
+    <p class="zk-muted" style="margin:0 0 8px 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; color:#c3c9bb;">
+      {{ intro }}
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td bgcolor="#12160f" style="background-color:#12160f; border:1px solid #282e26; border-radius:10px; padding:12px 14px; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; word-break:break-all;">
+        <a href="{{ url }}" class="zk-link" style="color:#a0cfd3; text-decoration:underline; word-break:break-all;">{{ url }}</a>
+      </td>
+    </tr></table>
+  </td>
+</tr></table>
+{%- endmacro -%}
+
+{#- `html` is TRUSTED template-literal markup (never user input) -> rendered raw. -#}
+{%- macro note(html) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td class="zk-pad" style="padding:0 40px 40px 40px; border-top:1px solid #282e26;">
+    <p class="zk-muted" style="margin:20px 0 0 0; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#c3c9bb;">
+      {{ html | safe }}
+    </p>
+  </td>
+</tr></table>
+{%- endmacro -%}

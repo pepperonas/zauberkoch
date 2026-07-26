@@ -45,9 +45,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export type MeResponse = ({ authenticated: true } & Me) | { authenticated: false };
 
+/** Email/password auth — CSRF-free (no session yet); JSON POST + SameSite=Lax. */
+type Ok = { ok: boolean; message?: string };
+const post = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+
 export const api = {
   me: () => request<MeResponse>('/me'),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  register: (email: string, password: string, passwordConfirm: string) =>
+    post<Ok>('/auth/register', { email, password, password_confirm: passwordConfirm }),
+  loginPassword: (email: string, password: string) => post<Ok>('/auth/login', { email, password }),
+  verifyEmail: (token: string) => post<{ ok: boolean; first_time: boolean }>('/auth/verify', { token }),
+  forgotPassword: (email: string) => post<Ok>('/auth/forgot', { email }),
+  resetPassword: (token: string, password: string, passwordConfirm: string) =>
+    post<Ok>('/auth/reset', { token, password, password_confirm: passwordConfirm }),
   confirmAdult: () => request<{ adult_confirmed: boolean }>('/me/confirm-adult', { method: 'POST' }),
   putPreferences: (prefs: Preferences) =>
     request<{ preferences: Preferences }>('/me/preferences', { method: 'PUT', body: JSON.stringify(prefs) }),

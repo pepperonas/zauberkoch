@@ -79,3 +79,25 @@ def send_verification_email(to: str, name: str, verify_url: str) -> bool:
     """Double-opt-in confirmation mail for a new email registration."""
     html, text = render("verify", name=name, verify_url=verify_url, valid_hours=24)
     return send(to, "Bestätige deine E-Mail für Zauberkoch", html, text)
+
+
+def send_reset_email(to: str, name: str, reset_url: str, valid_hours: int = 1) -> bool:
+    """Password-reset link mail."""
+    html, text = render("reset", name=name, reset_url=reset_url, valid_hours=valid_hours)
+    return send(to, "Passwort zurücksetzen bei Zauberkoch", html, text)
+
+
+def send_welcome_email(to: str, name: str, app_url: str, repo_url: str) -> bool:
+    """Welcome mail after a confirmed email registration (open-source note)."""
+    html, text = render("welcome", name=name, app_url=app_url, repo_url=repo_url)
+    return send(to, "Willkommen bei Zauberkoch 🧑‍🍳", html, text)
+
+
+def send_admin_signup_notification(
+    admin_to: str, *, email: str, name: str, method: str, language: str, when: str
+) -> bool:
+    """Notify the operator about a new registration (data-minimal)."""
+    html, text = render(
+        "admin_signup", email=email, name=name or "—", method=method, language=language or "—", when=when
+    )
+    return send(admin_to, f"Neue Registrierung: {email}", html, text)

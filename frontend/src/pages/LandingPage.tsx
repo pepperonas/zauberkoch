@@ -11,6 +11,7 @@ import { ConjureStage } from '../components/recipe/ConjureStage';
 import { motifForRecipe, RecipeMotif } from '../components/recipe/RecipeMotif';
 import { RecipeView, type RecipeViewData } from '../components/recipe/RecipeView';
 import { Button, Chip } from '../components/ui';
+import { AuthPanel } from '../features/auth/AuthPanel';
 import { strings, t } from '../i18n';
 import { api } from '../lib/api';
 import { tryRecipe } from '../lib/sse';
@@ -73,20 +74,20 @@ export function LandingPage() {
           <span className="hero__kueche">{t('app.tagline')}</span>
           <h1 className="hero__title">{t('landing.heroTitle')}</h1>
           <p className="hero__teaser">{t('landing.heroText')}</p>
-          <div className="row" style={{ marginTop: 'var(--space-5)', flexWrap: 'wrap' }}>
-            <Button big onClick={login}>
-              {t('auth.login')}
-            </Button>
+          <div style={{ marginTop: 'var(--space-5)' }}>
+            <AuthPanel onGoogle={login} />
             {import.meta.env.DEV && (
-              <Button
-                variant="text"
-                onClick={() => {
-                  sessionStorage.setItem('zk-crt-on', '1');
-                  window.location.href = '/api/v1/auth/dev-login';
-                }}
-              >
-                <Icon name="tools" size={18} /> {t('auth.devLogin')}
-              </Button>
+              <div className="row" style={{ justifyContent: 'center', marginTop: 'var(--space-3)' }}>
+                <Button
+                  variant="text"
+                  onClick={() => {
+                    sessionStorage.setItem('zk-crt-on', '1');
+                    window.location.href = '/api/v1/auth/dev-login';
+                  }}
+                >
+                  <Icon name="tools" size={18} /> {t('auth.devLogin')}
+                </Button>
+              </div>
             )}
           </div>
           <p className="muted" style={{ marginTop: 'var(--space-3)', font: 'var(--type-label-sm)', maxWidth: '46ch' }}>

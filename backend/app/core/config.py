@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     smtp_pass: str = ""
     smtp_from: str = "support@celox.io"
     smtp_from_name: str = "Zauberkoch"
+    # Where new-registration notifications go (operator inbox).
+    admin_notify_email: str = "martin.pfeffer@celox.io"
 
     @property
     def admin_emails(self) -> set[str]:
