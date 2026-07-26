@@ -1,7 +1,7 @@
 /* Zauberkoch Service Worker.
  * Cache version — BUMP on every app-shell change (+ update CLAUDE.md).
  */
-const CACHE = 'zauberkoch-v100';
+const CACHE = 'zauberkoch-v101';
 const API_CACHE = 'zauberkoch-api-v1';
 const SHELL = ['/', '/icon.svg', '/manifest.webmanifest', '/theme-init.js', '/fonts/inter.woff2', '/fonts/bricolage.woff2'];
 

@@ -1,7 +1,11 @@
 /** "Magic cauldron" conjuring stage for the streaming phase.
- * Full scene while waiting for the first event, then morphs into a compact
- * brewing banner above the incoming recipe. Every real SSE ingredient drops
- * into the vessel with a spark burst; phase text follows the stream.
+ * Stays at FULL size for the whole generation (2026-07-26): the vessel is the
+ * main event while the AI works — ingredients drop in, the phase text and a
+ * live counter track the stream, and only when the recipe is finished does the
+ * stage leave and hand the screen to the result. (It used to shrink to a 72px
+ * banner the moment the title arrived, which made the animation feel like it
+ * was over before it started.) Every real SSE ingredient drops into the vessel
+ * with a spark burst; phase text follows the stream.
  * Ambient loops are linear/tween by design (orbits, bubbles); one-shot
  * movement uses the shared springs. prefers-reduced-motion -> static vessel.
  */
@@ -23,11 +27,6 @@ interface Props {
   data: RecipeViewData;
   lastEvent: GenEvent;
 }
-
-/* Full-scene edge length in px — keep in sync with .conjure__scene(box) in
-   conjure.css. The compact banner morphs the scene down to COMPACT_SIZE. */
-const SCENE_SIZE = 320;
-const COMPACT_SIZE = 72;
 
 /* Deterministic spark-burst directions (transform-only). */
 const BURST = Array.from({ length: 6 }, (_, i) => {
@@ -54,7 +53,6 @@ function phaseText(lastEvent: GenEvent, data: RecipeViewData): string {
 
 export function ConjureStage({ mode, data, lastEvent }: Props) {
   const reduced = useReducedMotion();
-  const compact = data.meta != null;
   const zutaten = data.zutaten;
 
   // Rotating status lines during the initial wait (before the first event),
@@ -76,7 +74,7 @@ export function ConjureStage({ mode, data, lastEvent }: Props) {
   return (
     <motion.div
       layout={!reduced}
-      className={`conjure ${compact ? 'conjure--compact' : ''}`}
+      className="conjure"
       transition={spring}
       initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1 }}
@@ -84,11 +82,7 @@ export function ConjureStage({ mode, data, lastEvent }: Props) {
       aria-label={t('stream.stageLabel')}
     >
       <motion.div layout={!reduced} className="conjure__scenebox" transition={spring}>
-        <motion.div
-          className="conjure__scene"
-          animate={{ scale: compact ? COMPACT_SIZE / SCENE_SIZE : 1 }}
-          transition={spring}
-        >
+        <motion.div className="conjure__scene">
           {!reduced && (
             <>
               <Orbit emojis={orbitEmojis.slice(0, 4)} radius={126} duration={17} />
@@ -101,15 +95,11 @@ export function ConjureStage({ mode, data, lastEvent }: Props) {
             animate={reduced ? undefined : { opacity: [0.45, 0.8, 0.45], scale: [1, 1.08, 1] }}
             transition={{ repeat: Infinity, duration: 2.6, ease: 'easeInOut' }}
           />
-          {/* physics-based breathing while waiting (ambient loop; settles via token when compact) */}
+          {/* physics-based breathing for the whole generation (ambient loop) */}
           <motion.div
             className="conjure__vessel"
-            animate={!reduced && !compact ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-            transition={
-              !reduced && !compact
-                ? { repeat: Infinity, duration: 3, ease: 'easeInOut' }
-                : defaultSpatial
-            }
+            animate={reduced ? { scale: 1 } : { scale: [1, 1.05, 1] }}
+            transition={reduced ? defaultSpatial : { repeat: Infinity, duration: 3, ease: 'easeInOut' }}
           >
             {mode === 'cocktail' ? (
               <ShakerSvg reduced={!!reduced} />
@@ -135,10 +125,14 @@ export function ConjureStage({ mode, data, lastEvent }: Props) {
             {text}
           </motion.p>
         </AnimatePresence>
-        {compact && zutaten.length > 0 && (
+        {/* The phase line already names the ingredient count ("3 Zutaten sind schon
+            drin …"), so the counter only earns its place once steps start and it
+            can show both numbers at once. Until then: the cancel hint. */}
+        {data.schritte.length > 0 ? (
           <p className="conjure__meta">{strings.stream.pillProgress(zutaten.length, data.schritte.length)}</p>
+        ) : (
+          <p className="conjure__hint">{t('stream.cancelHint')}</p>
         )}
-        {!compact && <p className="conjure__hint">{t('stream.cancelHint')}</p>}
       </motion.div>
     </motion.div>
   );

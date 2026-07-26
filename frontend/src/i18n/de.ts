@@ -517,6 +517,16 @@ export const de = {
   },
 
   /** Ingredient input (fridge + pantry autocomplete). */
+  /** Footer "colophon": open source, origin, support. */
+  colophon: {
+    githubTitle: 'Open Source auf GitHub',
+    githubBody: 'Reinschauen & mitkochen',
+    donateTitle: 'Spendier einen Espresso',
+    donateBody: 'Hält die KI am Laufen',
+    madeWith: 'Mit',
+    madeIn: 'in Berlin gemacht',
+  },
+
   zutat: {
     remove: 'entfernen',
     maxReached: 'Maximum erreicht',

@@ -9,19 +9,7 @@
   text-align: center;
 }
 
-.conjure--compact {
-  flex-direction: row;
-  text-align: left;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-5);
-  background: var(--c-surface-container);
-  border-radius: var(--shape-xl);
-  overflow: hidden; /* orbiters must not spill past the banner */
-}
-
-/* Full-scene size — must stay in sync with SCENE_SIZE in ConjureStage.tsx
-   (the compact morph scale is computed from it). 320px still fits a 360px
+/* Full-scene size, held for the whole generation. 320px still fits a 360px
    phone inside the shell's 16px side padding. */
 .conjure__scenebox {
   position: relative;
@@ -29,17 +17,12 @@
   height: 320px;
   flex: none;
 }
-.conjure--compact .conjure__scenebox {
-  width: 72px;
-  height: 72px;
-}
 
 .conjure__scene {
   position: absolute;
   inset: 0;
   width: 320px;
   height: 320px;
-  transform-origin: 0 0;
 }
 
 .conjure__orbit {
@@ -119,9 +102,6 @@
   letter-spacing: var(--track-em);
   color: var(--c-on-surface);
   margin: 0;
-}
-.conjure--compact .conjure__text {
-  font: var(--type-body-lg);
 }
 .conjure__meta {
   font: var(--type-label-sm);

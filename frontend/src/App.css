@@ -269,3 +269,95 @@
   margin-top: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* ── Colophon: open source · support · origin ─────────────────────────────
+   Two tappable cards above the legal line. Deliberately quiet by default
+   (outlined, muted) and only warming up on hover/tap — a footer should invite,
+   not shout. Single column on phones, side by side from 520px. */
+.colophon {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 560px;
+  margin: 0 auto var(--space-4);
+  text-align: left;
+}
+@media (min-width: 520px) {
+  .colophon { grid-template-columns: 1fr 1fr; }
+}
+
+.colophon__card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--shape-lg);
+  background: var(--c-surface-container);
+  color: var(--c-on-surface);
+  text-decoration: none;
+  min-height: var(--touch-target);
+  transition:
+    border-color var(--effects-duration, 200ms) var(--effects-ease, ease),
+    background-color var(--effects-duration, 200ms) var(--effects-ease, ease),
+    transform 220ms var(--effects-ease, ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .colophon__card:hover { border-color: var(--c-primary); transform: translateY(-2px); }
+}
+.colophon__card:active { transform: translateY(0) scale(0.99); }
+
+.colophon__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--shape-md);
+  background: var(--c-surface-container-highest);
+  color: var(--c-on-surface);
+}
+/* the donate mark carries the warm accent — the one spot of colour down here */
+.colophon__mark--pp {
+  background: var(--c-primary-container);
+  color: var(--c-on-primary-container);
+}
+
+.colophon__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.colophon__text strong {
+  font: var(--type-label-lg);
+  color: var(--c-on-surface);
+}
+.colophon__text span {
+  font: var(--type-label-sm);
+  color: var(--c-on-surface-variant);
+}
+
+/* origin line — the heart beats gently, because it can */
+.colophon__origin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 var(--space-3);
+  font: var(--type-label-sm);
+  color: var(--c-on-surface-variant);
+}
+.colophon__heart {
+  display: inline-flex;
+  color: var(--c-error);
+  animation: colophon-beat 2.4s ease-in-out infinite;
+}
+@keyframes colophon-beat {
+  0%, 82%, 100% { transform: scale(1); }
+  88% { transform: scale(1.22); }
+  94% { transform: scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .colophon__heart { animation: none; }
+  .colophon__card { transition: none; }
+}

@@ -11,12 +11,14 @@ import {
 
 import { CrtOff, CrtOn } from './components/CrtOff';
 import { Icon, type IconName } from './components/icons';
+import { GithubMark } from './components/icons/GithubMark';
 import { ProfileSheet } from './components/ProfileSheet';
 import { SupportPrompt } from './components/SupportPrompt';
 import { IconButton } from './components/ui';
 import { strings, t } from './i18n';
 import { api } from './lib/api';
 import { spring } from './motion/springs';
+import { cancelGeneration, getGeneration } from './state/generation';
 import { useApp } from './state/app';
 import { useOnline } from './state/useOnline';
 import './App.css';
@@ -154,7 +156,20 @@ function Shell() {
     <div className="shell">
       <header className="shell__header">
         {/* SPA link — a real <a href> would hard-reload and kill a running generation */}
-        <Link to="/" viewTransition className="shell__logo">
+        <Link
+          to="/"
+          viewTransition
+          className="shell__logo"
+          onClick={() => {
+            // After a finished generation the logo doubles as "Neues Rezept":
+            // navigating home alone would just show the old result again.
+            // Only for 'done' — clicking the logo must never abort a running
+            // (already paid for) generation; that's what Abbrechen is for.
+            // Read via getGeneration() instead of the hook so the shell doesn't
+            // re-render on every streamed token.
+            if (getGeneration().phase === 'done') cancelGeneration();
+          }}
+        >
           <Icon name="logo" size={28} /> <span className="shell__logo-text">{t('app.name')}</span>
         </Link>
         <div className="row shell__actions">
@@ -247,6 +262,44 @@ function Shell() {
       )}
 
       <footer className="shell__footer">
+        {/* Colophon: two tappable cards (open source · support) above the
+            legal line, with a small hand-drawn-feeling origin note between. */}
+        <div className="colophon">
+          <a
+            className="colophon__card"
+            href="https://github.com/pepperonas/zauberkoch-pwa"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className="colophon__mark colophon__mark--gh" aria-hidden><GithubMark size={22} /></span>
+            <span className="colophon__text">
+              <strong>{t('colophon.githubTitle')}</strong>
+              <span>{t('colophon.githubBody')}</span>
+            </span>
+          </a>
+
+          <a
+            className="colophon__card colophon__card--donate"
+            href="https://www.paypal.com/donate/?business=martin.pfeffer%40celox.io&currency_code=EUR"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className="colophon__mark colophon__mark--pp" aria-hidden><Icon name="heart" size={20} /></span>
+            <span className="colophon__text">
+              <strong>{t('colophon.donateTitle')}</strong>
+              <span>{t('colophon.donateBody')}</span>
+            </span>
+          </a>
+        </div>
+
+        <p className="colophon__origin">
+          {t('colophon.madeWith')}
+          <span className="colophon__heart" aria-label="Liebe" role="img">
+            <Icon name="heart" size={13} />
+          </span>
+          {t('colophon.madeIn')}
+        </p>
+
         <nav className="shell__legal" aria-label="Rechtliches">
           <Link to="/impressum" viewTransition>{t('legal.impressum')}</Link>
           <span aria-hidden>·</span>
