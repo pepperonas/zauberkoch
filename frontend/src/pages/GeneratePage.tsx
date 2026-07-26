@@ -17,6 +17,7 @@ import { FeedbackBar } from '../components/recipe/FeedbackBar';
 import { RecipeView } from '../components/recipe/RecipeView';
 import { ShareDialog } from '../components/recipe/ShareDialog';
 import { Button, Chip, Segmented, Switch } from '../components/ui';
+import { ZutatInput } from '../components/ui/ZutatInput';
 import { Tooltip } from '../components/ui/Tooltip';
 import { Dialog } from '../components/ui/Dialog';
 import { Sheet } from '../components/ui/Sheet';
@@ -86,7 +87,6 @@ export function GeneratePage() {
   const setSchwierigkeit = (v: Schwierigkeit | null) => setSchwierigkeitRaw(v ?? '');
   const [personen, setPersonen] = useState(me?.preferences?.standard_personen ?? 2);
   const [fridge, setFridge] = useState<string[]>([]);
-  const [fridgeInput, setFridgeInput] = useState('');
   // Pantry staples arrive pre-selected; tapping deselects them for this run.
   const [pantryOff, setPantryOff] = useState<Set<string>>(new Set());
   const pantry = me?.preferences?.vorraete ?? [];
@@ -244,12 +244,6 @@ export function GeneratePage() {
         },
       });
     }
-  };
-
-  const addFridgeItem = () => {
-    const item = fridgeInput.trim();
-    if (item && !fridge.includes(item) && fridge.length < 30) setFridge([...fridge, item]);
-    setFridgeInput('');
   };
 
   const [scanning, setScanning] = useState(false);
@@ -663,15 +657,15 @@ export function GeneratePage() {
                         ))}
                       </div>
                     )}
-                    <input
-                      className="input"
-                      style={{ marginTop: 'var(--space-2)' }}
-                      value={fridgeInput}
-                      onChange={(e) => setFridgeInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addFridgeItem()}
-                      placeholder={t('wizard.fridgePlaceholder')}
-                      maxLength={60}
-                    />
+                    <div style={{ marginTop: 'var(--space-2)' }}>
+                      <ZutatInput
+                        items={fridge}
+                        onChange={setFridge}
+                        placeholder={t('wizard.fridgePlaceholder')}
+                        label={t('wizard.fridgeTitle')}
+                        max={30}
+                      />
+                    </div>
                     <div style={{ marginTop: 'var(--space-3)' }}>
                       <Tooltip text={t('tips.fridgeScan')}>
                         <Button variant="outlined" onClick={() => scanInputRef.current?.click()} disabled={scanning}>
@@ -687,15 +681,6 @@ export function GeneratePage() {
                         onChange={(e) => void onScanFile(e.target.files?.[0])}
                       />
                     </div>
-                    {fridge.length > 0 && (
-                      <div className="wiz__fridge-list">
-                        {fridge.map((item) => (
-                          <Chip key={item} selected onToggle={() => setFridge(fridge.filter((x) => x !== item))}>
-                            {item} <Icon name="close" size={13} />
-                          </Chip>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </>
               )}

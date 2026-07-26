@@ -1,0 +1,108 @@
+/* Ingredient input: autocomplete listbox + removable badges. */
+
+.zin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* the field owns the dropdown's positioning context */
+.zin__field {
+  position: relative;
+}
+
+.zin__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  background: var(--c-surface-container-high);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--shape-md);
+  box-shadow: var(--elev-2);
+  max-height: min(46vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain; /* don't scroll the page when the list ends */
+}
+
+.zin__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--shape-sm);
+  text-align: left;
+  color: var(--c-on-surface);
+  font: var(--type-body);
+}
+.zin__option--active {
+  background: var(--c-surface-container-highest);
+}
+.zin__option strong {
+  color: var(--c-primary);
+  font-weight: 700;
+}
+.zin__option svg {
+  flex: none;
+  color: var(--c-on-surface-variant);
+}
+
+/* badges */
+.zin__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zin__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* left padding for the label, tighter right so the X sits close */
+  padding: 0 var(--space-1) 0 var(--space-4);
+  min-height: 36px;
+  background: var(--c-secondary-container);
+  color: var(--c-on-secondary-container);
+  border-radius: var(--shape-full);
+  font: var(--type-label-lg);
+  max-width: 100%;
+}
+.zin__badge-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* real button: 32px visual, 44px hit area via the ::before overlay */
+.zin__badge-x {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: inherit;
+  opacity: 0.75;
+  transition: opacity var(--effects-duration, 200ms) var(--effects-ease, ease),
+    background-color var(--effects-duration, 200ms) var(--effects-ease, ease);
+}
+.zin__badge-x::before {
+  content: '';
+  position: absolute;
+  inset: -6px; /* -> 44px touch target without inflating the badge */
+}
+.zin__badge-x:hover,
+.zin__badge-x:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, var(--c-on-secondary-container) 14%, transparent);
+}

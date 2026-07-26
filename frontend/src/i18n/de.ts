@@ -516,6 +516,12 @@ export const de = {
     thanks: 'Danke dir! 🧡',
   },
 
+  /** Ingredient input (fridge + pantry autocomplete). */
+  zutat: {
+    remove: 'entfernen',
+    maxReached: 'Maximum erreicht',
+  },
+
   support: {
     title: 'Schmeckt’s?',
     body: 'Zauberkoch ist kostenlos und Open Source — ein Hobby-Projekt von mir. Wenn du magst, hilfst du mir mit einer Kleinigkeit weiter:',

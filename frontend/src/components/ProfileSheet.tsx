@@ -10,6 +10,7 @@ import { useApp } from '../state/app';
 import { Icon } from './icons';
 import { Button, Chip, Switch } from './ui';
 import { Sheet } from './ui/Sheet';
+import { ZutatInput } from './ui/ZutatInput';
 import { useSnackbar } from './ui/Snackbar';
 import '../pages/wizard.css';
 
@@ -25,7 +26,6 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const { show } = useSnackbar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [input, setInput] = useState('');
-  const [pantryInput, setPantryInput] = useState('');
 
   useEffect(() => {
     if (open && me) setPrefs({ ...me.preferences });
@@ -44,14 +44,6 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   };
 
   const pantry = prefs.vorraete ?? [];
-  const addPantry = () => {
-    const item = pantryInput.trim();
-    if (item && !pantry.some((p) => p.toLowerCase() === item.toLowerCase()) && pantry.length < 40) {
-      set({ vorraete: [...pantry, item] });
-    }
-    setPantryInput('');
-  };
-
   const save = async () => {
     await api.putPreferences(prefs);
     refreshMe();
@@ -124,24 +116,15 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
           <p className="muted" style={{ font: 'var(--type-label-sm)', margin: 'var(--space-1) 0 0' }}>
             {t('profile.pantryHint')}
           </p>
-          <input
-            className="input"
-            style={{ marginTop: 'var(--space-2)' }}
-            value={pantryInput}
-            onChange={(e) => setPantryInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addPantry()}
-            placeholder={t('profile.pantryPlaceholder')}
-            maxLength={60}
-          />
-          {pantry.length > 0 && (
-            <div className="chips" style={{ marginTop: 'var(--space-3)' }}>
-              {pantry.map((item) => (
-                <Chip key={item} selected onToggle={() => set({ vorraete: pantry.filter((x) => x !== item) })}>
-                  {item} <Icon name="close" size={13} />
-                </Chip>
-              ))}
-            </div>
-          )}
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <ZutatInput
+              items={pantry}
+              onChange={(next) => set({ vorraete: next })}
+              placeholder={t('profile.pantryPlaceholder')}
+              label={t('profile.pantry')}
+              max={40}
+            />
+          </div>
         </div>
 
         <div className="wiz__row">
