@@ -200,4 +200,6 @@ class AppSettings(Base):
     anon_ip_limit: Mapped[int] = mapped_column(Integer)  # taster generations per IP/day
     anon_global_limit: Mapped[int] = mapped_column(Integer)  # taster generations total/day
     open_signup: Mapped[bool] = mapped_column(Boolean, server_default="1")  # self-service registration
+    # Intro animation for shared-recipe links: "motif" | "crt" | "off"
+    share_intro: Mapped[str] = mapped_column(String(16), server_default="motif")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

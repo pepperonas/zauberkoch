@@ -43,6 +43,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Admin-configured intro animation for shared links (public setting). */
+export type ShareIntroMode = 'motif' | 'crt' | 'off';
+
 export type MeResponse = ({ authenticated: true } & Me) | { authenticated: false };
 
 /** Email/password auth — CSRF-free (no session yet); JSON POST + SameSite=Lax. */
@@ -93,7 +96,7 @@ export const api = {
   shareRevoke: (id: number) =>
     request<{ share_token: null }>(`/recipes/${id}/share`, { method: 'DELETE' }),
   sharedGet: (token: string) =>
-    request<{ mode: Modus; recipe: Recipe; share_token: string }>(`/share/${token}`),
+    request<{ mode: Modus; recipe: Recipe; share_token: string; intro: ShareIntroMode }>(`/share/${token}`),
   shareAdopt: (token: string) =>
     request<{ recipe_id: number }>(`/share/${token}/adopt`, { method: 'POST' }),
 

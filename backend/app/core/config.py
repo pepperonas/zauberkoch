@@ -39,6 +39,8 @@ class Settings(BaseSettings):
 
     # Access & limits
     open_signup: bool = True  # self-service registration (no invite/allowlist gate)
+    # Intro animation on shared-recipe links: motif (pot/shaker) | crt | off
+    share_intro: str = "motif"
     zk_dev_login: bool = False  # dev-only fake login (hard-refused in prod)
     zk_admin_emails: str = ""  # comma-separated admin emails
     # System limits — DEFAULTS. Editable at runtime in the admin panel (persisted

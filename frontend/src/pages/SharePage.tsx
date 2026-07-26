@@ -2,6 +2,8 @@
  * adoptable into the own collection when logged in.
  */
 
+import { AnimatePresence } from 'motion/react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -11,6 +13,7 @@ import { Button } from '../components/ui';
 import { useSnackbar } from '../components/ui/Snackbar';
 import { t } from '../i18n';
 import { api } from '../lib/api';
+import { ShareIntro } from '../features/share/ShareIntro';
 import { useApp } from '../state/app';
 
 export function SharePage() {
@@ -26,6 +29,12 @@ export function SharePage() {
     enabled: Boolean(token),
     retry: false,
   });
+
+  // Admin-configured entrance animation (server-provided with the payload).
+  // Plays on every shared link, then reveals the recipe underneath.
+  const [introDone, setIntroDone] = useState(false);
+  const intro = shared.data?.intro ?? 'off';
+  const introActive = Boolean(shared.data) && intro !== 'off' && !introDone;
 
   if (shared.isLoading) return <p className="muted page__title">{t('common.loading')}</p>;
   if (!shared.data) {
@@ -51,6 +60,18 @@ export function SharePage() {
 
   return (
     <div>
+      {/* Entrance animation over the (already rendered) recipe, so the content
+          is fully painted the moment the intro lifts — no second load. */}
+      <AnimatePresence>
+        {introActive && (
+          <ShareIntro
+            mode={mode}
+            title={recipe.titel}
+            variant={intro === 'crt' ? 'crt' : 'motif'}
+            onDone={() => setIntroDone(true)}
+          />
+        )}
+      </AnimatePresence>
       <p className="hero__kueche" style={{ margin: 'var(--space-4) 0' }}><Icon name="link" size={14} /> {t('shared.badge')}</p>
       <RecipeView
         data={{

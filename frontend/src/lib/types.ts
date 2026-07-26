@@ -176,6 +176,8 @@ export interface AdminUser {
 }
 
 export interface SystemLimits {
+  /** Intro animation on shared-recipe links: motif | crt | off */
+  share_intro: 'motif' | 'crt' | 'off';
   default_user_limit: number;
   global_daily_limit: number;
   registration_daily_limit: number;

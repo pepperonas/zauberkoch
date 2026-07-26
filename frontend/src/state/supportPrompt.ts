@@ -67,6 +67,14 @@ export function recordGeneration(): void {
   emit();
 }
 
+/** The AI-budget notice already asked for support — hold the generic prompt
+ * back for a while so the user isn't asked twice in one sitting. Treated like
+ * a soft dismiss (returns after REPEAT_EVERY more recipes). */
+export function noteSupportAskedElsewhere(): void {
+  if (state.shownAt === state.count) return; // already deferred at this count
+  dismissSupport(false);
+}
+
 /** Dismiss the prompt. `forever` silences it; otherwise it may return later. */
 export function dismissSupport(forever: boolean): void {
   state = { ...state, shownAt: state.count, silenced: state.silenced || forever };

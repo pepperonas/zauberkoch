@@ -29,6 +29,8 @@ import { api } from '../lib/api';
 import type { GenerateParams, Me, Modus, Preferences, Schwierigkeit } from '../lib/types';
 import { spring, springSnappy } from '../motion/springs';
 import { errorIn, fastSpatial, heroEnter, reducedFade, shuffleWiggle, slowSpatial, staggerIn } from '../motion/tokens';
+import { AiBudgetNotice, resetTimeLabel } from '../features/support/AiBudgetNotice';
+import { noteSupportAskedElsewhere } from '../state/supportPrompt';
 import { useApp } from '../state/app';
 import { useLocalStorageState } from '../state/useLocalStorageState';
 import {
@@ -416,6 +418,18 @@ export function GeneratePage() {
 
   /* ---------- render: daily limit ---------- */
   if (gen.phase === 'limit') {
+    // The PROJECT budget being spent is a different story than the user's own
+    // daily allowance: only the former warrants explaining the funding model
+    // and asking for support (asking after a personal cap would be pushy).
+    const code = gen.error?.code ?? '';
+    if (code === 'daily_limit_global' || code === 'daily_limit_anon') {
+      return (
+        <>
+          <AiBudgetNotice retryAfter={gen.error?.retry_after} onRetry={cancelGeneration} />
+          <BudgetSeen />
+        </>
+      );
+    }
     return (
       <div className="limitbox">
         <motion.div
@@ -429,6 +443,11 @@ export function GeneratePage() {
         </motion.div>
         <h2>{t('stream.limitReached')}</h2>
         <p className="muted" style={{ marginTop: 'var(--space-3)' }}>{gen.error?.message}</p>
+        {resetTimeLabel(gen.error?.retry_after) && (
+          <p className="muted" style={{ marginTop: 'var(--space-2)', font: 'var(--type-label-sm)' }}>
+            {t('budget.backAvailable').replace('{time}', resetTimeLabel(gen.error?.retry_after))}
+          </p>
+        )}
         <div style={{ marginTop: 'var(--space-6)' }}>
           <Button variant="tonal" onClick={cancelGeneration}>← {t('wizard.back')}</Button>
         </div>
@@ -812,4 +831,13 @@ export function GeneratePage() {
       </Dialog>
     </div>
   );
+}
+
+/** Marks the generic support prompt as "asked" while the budget notice (which
+ * already contains a donation ask) is on screen — prevents a double ask. */
+function BudgetSeen() {
+  useEffect(() => {
+    noteSupportAskedElsewhere();
+  }, []);
+  return null;
 }

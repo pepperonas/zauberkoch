@@ -19,6 +19,7 @@ from app.core.security import get_current_user, require_csrf
 from app.db import get_db
 from app.models import Recipe, User
 from app.services import og_image
+from app.services.limits import get_limits
 from app.services.ratelimit_ip import check_ip_limit
 
 logger = logging.getLogger("zauberkoch.share")
@@ -119,7 +120,14 @@ def daily(request: Request, db: DbSession = Depends(get_db)) -> dict:
 def get_shared(token: str, request: Request, db: DbSession = Depends(get_db)) -> dict:
     check_ip_limit(request, scope="share", limit=60, window_s=60)
     row = _by_token(token, db)
-    return {"mode": row.mode, "recipe": json.loads(row.recipe_json), "share_token": token}
+    # `intro` is the admin-configured entrance animation for shared links —
+    # public on purpose, the page needs it without being logged in.
+    return {
+        "mode": row.mode,
+        "recipe": json.loads(row.recipe_json),
+        "share_token": token,
+        "intro": get_limits(db).share_intro,
+    }
 
 
 @router.post("/share/{token}/adopt", dependencies=[Depends(require_csrf)])

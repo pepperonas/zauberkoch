@@ -4,6 +4,7 @@ Gated by require_admin (email in ZK_ADMIN_EMAILS) — 404 for everyone else.
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
@@ -220,6 +221,7 @@ def _limits_payload(db: DbSession) -> dict:
         "anon_ip_limit": lim.anon_ip_limit,
         "anon_global_limit": lim.anon_global_limit,
         "open_signup": lim.open_signup,
+        "share_intro": lim.share_intro,
         "registrations_today": ratelimit.registrations_today(db),
     }
 
@@ -236,6 +238,8 @@ class LimitsBody(BaseModel):
     anon_ip_limit: int | None = Field(default=None, ge=0, le=10000)
     anon_global_limit: int | None = Field(default=None, ge=0, le=1000000)
     open_signup: bool | None = None
+    # Intro animation on shared-recipe links (public setting, read by /share)
+    share_intro: Literal["motif", "crt", "off"] | None = None
 
 
 @router.patch("/limits", dependencies=[Depends(require_csrf)])

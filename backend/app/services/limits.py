@@ -17,7 +17,8 @@ from app.models import AppSettings
 SETTINGS_ID = 1
 
 # app_settings column <-> config attribute the column defaults from. Mostly int
-# daily caps; `open_signup` is the one bool (getattr/setattr are type-agnostic).
+# daily caps; `open_signup` (bool) and `share_intro` (str) ride along —
+# getattr/setattr are type-agnostic.
 _FIELDS: dict[str, str] = {
     "default_user_limit": "daily_limit_per_user",
     "global_daily_limit": "daily_limit_global",
@@ -25,6 +26,7 @@ _FIELDS: dict[str, str] = {
     "anon_ip_limit": "anon_ip_limit",
     "anon_global_limit": "daily_limit_anon",
     "open_signup": "open_signup",
+    "share_intro": "share_intro",
 }
 
 
@@ -36,6 +38,7 @@ class Limits:
     anon_ip_limit: int
     anon_global_limit: int
     open_signup: bool
+    share_intro: str
 
 
 def _from_config() -> Limits:

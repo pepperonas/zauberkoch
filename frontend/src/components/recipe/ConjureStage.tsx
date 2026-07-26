@@ -240,7 +240,7 @@ export function SparkBurst() {
   );
 }
 
-function CauldronSvg({ reduced, stirKey }: { reduced: boolean; stirKey: number }) {
+export function CauldronSvg({ reduced, stirKey }: { reduced: boolean; stirKey: number }) {
   return (
     <motion.svg
       key={reduced ? 'static' : stirKey}
@@ -282,7 +282,7 @@ function CauldronSvg({ reduced, stirKey }: { reduced: boolean; stirKey: number }
   );
 }
 
-function ShakerSvg({ reduced }: { reduced: boolean }) {
+export function ShakerSvg({ reduced }: { reduced: boolean }) {
   return (
     <motion.svg
       className="conjure__svg conjure__svg--shaker"

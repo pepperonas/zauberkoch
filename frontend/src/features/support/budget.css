@@ -1,0 +1,127 @@
+/* "AI budget exhausted" notice — centred column, M3 surfaces, responsive.
+   Sits inside the normal page flow (no overlay), so mobile just scrolls. */
+
+.budget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  max-width: 46ch;
+  margin: var(--space-8) auto 0;
+  padding: 0 var(--space-2);
+}
+
+.budget__icon {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--c-primary-container);
+  color: var(--c-on-primary-container);
+  margin-bottom: var(--space-2);
+}
+
+.budget__title {
+  font: var(--type-headline-em);
+  letter-spacing: var(--track-em);
+  margin: 0;
+}
+
+.budget__body {
+  color: var(--c-on-surface-variant);
+  margin: 0;
+}
+
+.budget__eta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--c-surface-container-high);
+  border-radius: var(--shape-full);
+  font: var(--type-label-sm);
+  color: var(--c-on-surface);
+}
+
+.budget__ask {
+  font: var(--type-label-sm);
+  margin: var(--space-2) 0 0;
+}
+
+.budget__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+.budget__donate {
+  width: 100%;
+  max-width: 320px;
+  text-decoration: none;
+}
+.budget__donate-hint {
+  font: var(--type-label-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* GitHub card */
+.budget__github {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4);
+  margin-top: var(--space-3);
+  text-align: left;
+  text-decoration: none;
+  color: var(--c-on-surface);
+  background: var(--c-surface-container);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--shape-lg);
+  transition: border-color var(--effects-duration, 200ms) var(--effects-ease, ease);
+}
+.budget__github:hover { border-color: var(--c-primary); }
+.budget__github-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--shape-md);
+  background: var(--c-surface-container-highest);
+  color: var(--c-on-surface);
+}
+.budget__github-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.budget__github-text strong { font: var(--type-title); }
+.budget__github-text .muted { font: var(--type-label-sm); }
+
+.budget__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.budget__more {
+  font: var(--type-label-sm);
+  color: var(--c-on-surface-variant);
+  text-decoration: underline;
+  min-height: var(--touch-target);
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (min-width: 560px) {
+  .budget__foot { flex-direction: row; gap: var(--space-5); }
+}

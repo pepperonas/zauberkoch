@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Icon } from '../components/icons';
 import { Sparkline } from '../components/admin/Sparkline';
-import { IconButton, Switch } from '../components/ui';
+import { IconButton, Segmented, Switch } from '../components/ui';
 import { useSnackbar } from '../components/ui/Snackbar';
 import { strings, t } from '../i18n';
 import { api } from '../lib/api';
@@ -358,6 +358,24 @@ export function AdminPage() {
               label={t('admin.openSignup')}
             />
           </div>
+        )}
+
+        <h3 style={{ margin: 'var(--space-6) 0 var(--space-2)' }}>{t('admin.shareIntroTitle')}</h3>
+        {limits.data && (
+          <>
+            <p className="muted" style={{ font: 'var(--type-label-sm)', margin: '0 0 var(--space-3)' }}>
+              {t('admin.shareIntroHint')}
+            </p>
+            <Segmented<'motif' | 'crt' | 'off'>
+              options={[
+                { value: 'motif', label: t('admin.shareIntroMotif') },
+                { value: 'crt', label: t('admin.shareIntroCrt') },
+                { value: 'off', label: t('admin.shareIntroOff') },
+              ]}
+              value={limits.data.share_intro}
+              onChange={(v) => saveLimits.mutate({ share_intro: v })}
+            />
+          </>
         )}
 
         <h3 style={{ margin: 'var(--space-6) 0 var(--space-2)' }}>{t('admin.allowlistTitle')}</h3>

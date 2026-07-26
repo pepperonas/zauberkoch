@@ -142,6 +142,22 @@ def test_admin_system_limits_get_and_patch(client, admin, db_session):
     assert client.patch("/api/v1/admin/limits", json={"global_daily_limit": 99999999}, headers=admin).status_code == 422
 
 
+def test_admin_share_intro_setting(client, admin, db_session):
+    """The shared-link intro animation is admin-configurable and public-readable."""
+    from app.core.config import get_settings
+
+    # default comes from config until an admin overrides it
+    assert client.get("/api/v1/admin/limits", headers=admin).json()["share_intro"] == get_settings().share_intro
+
+    for value in ("crt", "off", "motif"):
+        d = client.patch("/api/v1/admin/limits", json={"share_intro": value}, headers=admin).json()
+        assert d["share_intro"] == value
+        assert client.get("/api/v1/admin/limits", headers=admin).json()["share_intro"] == value
+
+    # only the three known modes are accepted
+    assert client.patch("/api/v1/admin/limits", json={"share_intro": "sparkles"}, headers=admin).status_code == 422
+
+
 def test_admin_open_signup_toggle_gates_registration(client, admin, db_session, monkeypatch):
     """The DB toggle overrides config and actually gates Google signup — both ways."""
     from app.models import User

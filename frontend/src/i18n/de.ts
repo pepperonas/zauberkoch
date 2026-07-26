@@ -304,6 +304,10 @@ export const de = {
     adopted: 'In deine Rezepte übernommen',
     loginCta: 'Eigene Rezepte zaubern? Anmelden!',
     notFound: 'Dieser Link ist ungültig oder wurde widerrufen.',
+    introLabel: 'Rezept wird serviert',
+    introDish: 'Frisch aus der Zauberküche',
+    introDrink: 'Frisch aus der Zauberbar',
+    introSkip: 'Tippen zum Überspringen',
   },
   plan: {
     title: 'Wochenplan',
@@ -427,6 +431,11 @@ export const de = {
     registrationsToday: (n: number) => `heute: ${n}`,
     signupTitle: 'Registrierung',
     openSignup: 'Offene Registrierung',
+    shareIntroTitle: 'Intro bei geteilten Links',
+    shareIntroHint: 'Wird abgespielt, wenn jemand einen geteilten Rezept-Link öffnet.',
+    shareIntroMotif: 'Topf/Shaker',
+    shareIntroCrt: 'CRT-Einschalten',
+    shareIntroOff: 'Aus',
     openSignupHint: 'An: jeder kann sich per Google anmelden. Aus: nur E-Mails auf der Allowlist.',
     allowlistTitle: 'Allowlist',
     allowlistNoteOpen: 'Aktuell ist die Registrierung offen — die Allowlist wird ignoriert.',
@@ -476,6 +485,35 @@ export const de = {
     openRecipe: 'Rezept ansehen',
     offline: 'Du bist offline — Favoriten bleiben lesbar.',
     themeToggle: 'Design umschalten',
+  },
+
+  /** "AI budget exhausted" notice — four tone variants, one active (see
+   *  features/support/AiBudgetNotice.tsx). Shown ONLY for the global/anon
+   *  budget, never for a personal daily limit. */
+  budget: {
+    // 1 — short inline hint (1–2 sentences)
+    shortTitle: 'KI macht Pause',
+    shortBody: 'Das KI-Budget für heute ist aufgebraucht — {time} geht’s weiter. Zauberkoch ist Open Source und läuft rein über Spenden.',
+    // 2 — standard dialog (recommended)
+    title: 'Der Zauberkoch macht kurz Pause',
+    body: 'Das KI-Kontingent für heute ist aufgebraucht — {time} kannst du wieder zaubern. Zauberkoch ist ein freies Open-Source-Projekt: Jede Generierung kostet echtes Geld bei der KI, und finanziert wird das ausschließlich über freiwillige Spenden.',
+    bodyNoTime: 'Das KI-Kontingent für heute ist aufgebraucht — morgen kannst du wieder zaubern. Zauberkoch ist ein freies Open-Source-Projekt: Jede Generierung kostet echtes Geld bei der KI, und finanziert wird das ausschließlich über freiwillige Spenden.',
+    // 3 — warmer, still professional
+    warmTitle: 'Für heute ist der Topf leer',
+    warmBody: 'So viel wurde heute gezaubert, dass das KI-Budget aufgebraucht ist — schön, dass Zauberkoch so gut ankommt! {time} geht es weiter. Das Projekt ist Open Source und wird allein von Menschen getragen, die freiwillig etwas beisteuern.',
+    // 4 — a pinch of humour, still serious
+    funTitle: 'Der Zauberstab braucht neue Batterien',
+    funBody: 'Das Tages-Budget der KI ist aufgebraucht — {time} ist der Zauberstab wieder aufgeladen. Zauberkoch ist Open Source und wird komplett aus Spenden bezahlt: Jedes Rezept kostet ein paar Cent bei der KI.',
+    // shared UI
+    ask: 'Wenn dir Zauberkoch etwas wert ist, freue ich mich über eine kleine Unterstützung — ganz freiwillig, ohne Konto und ohne Abo.',
+    donate: 'Mit PayPal unterstützen',
+    donateHint: 'PayPal: martin.pfeffer@celox.io',
+    githubTitle: 'Quellcode auf GitHub',
+    githubBody: 'Ansehen, einen Stern dalassen oder selbst mitentwickeln — der ganze Zauberkoch ist offen.',
+    retry: 'Später erneut versuchen',
+    more: 'Mehr erfahren',
+    backAvailable: 'Wieder verfügbar {time}',
+    thanks: 'Danke dir! 🧡',
   },
 
   support: {

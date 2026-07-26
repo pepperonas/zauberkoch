@@ -1,0 +1,117 @@
+/* Full-screen intro for shared-recipe links. Fixed + dvh so a mobile URL-bar
+   toggle can't shift it mid-animation; the stage scales with the viewport so
+   the vessel stays "very present" from 320px phones up to desktop. */
+
+.sintro {
+  position: fixed;
+  inset: 0;
+  z-index: 90; /* above app chrome, below the CRT overlay (100) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--c-surface);
+  cursor: pointer;
+  /* keep the orbit ring from ever producing a scrollbar */
+  overflow: hidden;
+  text-align: center;
+}
+
+/* Stage size: big on every device, but never wider than the viewport.
+   min() against vh too, so landscape phones don't clip the vessel. */
+.sintro__stage {
+  position: relative;
+  width: min(88vw, 52vh, 420px);
+  height: min(88vw, 52vh, 420px);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.sintro__orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sintro__orbiter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px;
+  display: grid;
+  place-items: center;
+}
+.sintro__orbiter-emoji {
+  display: inline-block;
+  /* scales with the stage so the ring never crowds a small screen */
+  font-size: clamp(1.4rem, 6vw, 2.1rem);
+  filter: drop-shadow(0 2px 8px var(--c-scrim));
+}
+
+.sintro__glow {
+  position: absolute;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c-hero-glow), transparent 65%);
+  pointer-events: none;
+}
+
+.sintro__vessel {
+  position: relative;
+  width: 56%;
+  height: 56%;
+  will-change: transform;
+}
+.sintro__vessel-inner {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+.sintro__vessel svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sintro__label {
+  margin: 0;
+  font: var(--type-label-lg);
+  color: var(--c-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sintro__title {
+  margin: 0;
+  max-width: 20ch;
+  font: var(--type-display-md-em);
+  letter-spacing: var(--track-em);
+  text-wrap: balance;
+  /* explicit: the overlay sits outside the usual surface context, and the
+     display font may still be swapping in — never leave the title low-contrast */
+  color: var(--c-on-surface);
+}
+
+.sintro__skip {
+  position: absolute;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  font: var(--type-label-sm);
+  color: var(--c-on-surface-variant);
+}
+
+/* Desktop: keep the vessel dominant instead of a small island in a big page. */
+@media (min-width: 900px) and (min-height: 700px) {
+  .sintro__stage { width: min(46vh, 460px); height: min(46vh, 460px); }
+}
+
+/* Landscape phones: stack tighter so title + vessel both stay visible. */
+@media (max-height: 520px) {
+  .sintro { gap: var(--space-2); }
+  .sintro__stage { width: min(60vw, 62vh); height: min(60vw, 62vh); }
+  .sintro__title { font: var(--type-headline-em); }
+}

@@ -38,6 +38,8 @@ def test_public_share_needs_no_auth(client, logged_in, mock_ai):  # noqa: F811
     body = r.json()
     assert body["recipe"]["titel"] == "Pasta al Limone"
     assert body["mode"] == "kochen"
+    # the admin-configured intro animation rides along (public, no auth needed)
+    assert body["intro"] in {"motif", "crt", "off"}
 
 
 def test_revoke_kills_link(client, logged_in, mock_ai):  # noqa: F811
