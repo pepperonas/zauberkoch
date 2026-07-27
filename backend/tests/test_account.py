@@ -236,3 +236,50 @@ class TestExportRobustness:
         assert data["einkaufsliste"] == []
         assert data["wochenplan"] == []
         assert data["nutzung"] == []
+
+
+class TestDeletionDuringGeneration:
+    def test_a_generation_finishing_after_deletion_keeps_the_cache_entry(
+        self, client, logged_in, db_session, monkeypatch
+    ):
+        """The finalizer runs in a worker thread AFTER the model call, so the
+        account can be gone by the time it writes. Its rows carry a user_id
+        foreign key: inserting them raises and takes the cache entry with them,
+        throwing away a generation that was already paid for.
+
+        Reproduced for real — the fake stream deletes the account between the
+        last recipe event and the finalizer, which is exactly the race.
+        """
+        from app.api.v1 import recipes as recipes_module
+        from app.db import SessionLocal
+        from app.models import GenerationCache
+        from app.services.json_stream import replay_events
+        from tests.test_generation import RECIPE
+
+        async def fake_events(params, api_key=None):
+            for ev in replay_events(dict(RECIPE)):
+                yield ev
+            # …user hits "Konto löschen" right here.
+            side = SessionLocal()
+            try:
+                side.delete(side.execute(select(User)).scalar_one())
+                side.commit()
+            finally:
+                side.close()
+            yield ("usage", {"input_tokens": 10, "output_tokens": 5,
+                             "cache_read_tokens": 0, "cache_write_tokens": 0, "duration_ms": 1})
+
+        monkeypatch.setattr(recipes_module.ai, "generate_recipe_events", fake_events)
+
+        r = client.post("/api/v1/recipes/generate", json=PARAMS, headers=logged_in)
+        assert r.status_code == 200, r.text
+        events = parse_sse(r.text)
+        assert "error" not in [name for name, _ in events], "the stream must not fail"
+
+        db_session.expire_all()
+        # Nothing owner-bound survives …
+        assert db_session.execute(select(User)).scalars().all() == []
+        assert db_session.execute(select(Recipe)).scalars().all() == []
+        assert db_session.execute(select(Generation)).scalars().all() == []
+        # … but the paid AI output is still in the shared cache.
+        assert db_session.execute(select(GenerationCache)).scalars().all() != []

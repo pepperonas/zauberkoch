@@ -122,7 +122,22 @@ def add_item(
     db: DbSession = Depends(get_db),
 ) -> dict:
     norm = normalize(body.name, body.menge, body.einheit)
-    next_pos = max((i.position for i in _items(db, user)), default=-1) + 1
+    existing = _items(db, user)
+    # Same merge rule as adding from a recipe: (normalized name, base unit) on
+    # an unchecked line. Without this, typing "Tomate" twice left two identical
+    # lines on the list — the recipe path has always merged, the manual one
+    # never did.
+    target = next(
+        (i for i in existing if not i.checked and (i.name.lower(), i.einheit) == (norm.name_key, norm.einheit)),
+        None,
+    )
+    if target is not None:
+        if norm.menge is not None:
+            target.menge = (target.menge or 0) + norm.menge
+        db.commit()
+        return _serialize(target)
+
+    next_pos = max((i.position for i in existing), default=-1) + 1
     item = ShoppingListItem(
         user_id=user.id, name=norm.name, menge=norm.menge, einheit=norm.einheit, position=next_pos
     )

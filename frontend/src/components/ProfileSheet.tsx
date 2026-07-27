@@ -1,7 +1,7 @@
 /** Profile & preferences: persistent diet flags, no-go ingredients,
  * default servings — merged into every generation server-side. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { strings, t } from '../i18n';
 import { api, ApiRequestError } from '../lib/api';
@@ -36,8 +36,18 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const [keyBusy, setKeyBusy] = useState(false);
   const [keyError, setKeyError] = useState('');
 
+  // Seed the form ONCE per opening. Re-seeding on every `me` change looked
+  // harmless until saving an API key called refreshMe() — the fresh `me` then
+  // overwrote unsaved diet/pantry edits and the switches jumped back.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (open && me) setPrefs({ ...me.preferences });
+    if (!open) {
+      seeded.current = false;
+      return;
+    }
+    if (seeded.current || !me) return;
+    seeded.current = true;
+    setPrefs({ ...me.preferences });
   }, [open, me]);
 
   if (!prefs) return <Sheet open={false} onClose={onClose} label={t('profile.title')}>{null}</Sheet>;

@@ -206,6 +206,17 @@ async def generate(
 
         session = SessionLocal()
         try:
+            # The account can be gone by now — deletion is a click and this runs
+            # after the model call. Both the usage row and the recipe carry a
+            # user_id foreign key and would fail to insert, taking the cache
+            # entry down with them. The generation is already paid for, so save
+            # what has no owner: the cache entry serves everyone for free.
+            if session.get(User, user_id) is None:
+                if final is not None:
+                    cache.store(session, h, json.dumps(final, ensure_ascii=False), current_version, model)
+                logger.info("account gone mid-generation; kept the cache entry only")
+                return None
+
             status = "ok" if final is not None else "error"
             session.add(
                 Generation(

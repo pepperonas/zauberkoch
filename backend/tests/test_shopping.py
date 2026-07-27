@@ -101,3 +101,77 @@ def test_shopping_check_reorder_and_clear(client, logged_in, mock_ai):  # noqa: 
 def test_shopping_requires_csrf(client, logged_in, mock_ai):  # noqa: F811
     r = client.post("/api/v1/shopping/items", json={"name": "X"})
     assert r.status_code == 403
+
+
+class TestUnitSpellings:
+    """The merge key is (name, unit), so a unit that normalizes differently
+    splits one ingredient into two shopping-list lines. Abbreviations arrive
+    from the model in every shape — they all have to land on one key."""
+
+    def test_trailing_periods_do_not_create_their_own_unit(self):
+        from app.services.aggregation import normalize
+
+        for spelling in ("Stück", "Stk", "Stk.", "St.", "stk."):
+            assert normalize("Tomate", 1, spelling).einheit == "Stück", spelling
+
+    def test_spelled_out_spoons_match_their_abbreviation(self):
+        from app.services.aggregation import normalize
+
+        for spelling in ("EL", "el", "el.", "Esslöffel", "Essloeffel"):
+            assert normalize("Öl", 1, spelling).einheit == "EL", spelling
+        for spelling in ("TL", "tl.", "Teelöffel", "Teeloeffel"):
+            assert normalize("Salz", 1, spelling).einheit == "TL", spelling
+
+    def test_volume_and_weight_collapse_to_one_base_unit(self):
+        from app.services.aggregation import normalize
+
+        assert normalize("Milch", 1, "l").menge == 1000
+        assert normalize("Milch", 1, "dl").menge == 100
+        assert normalize("Gin", 5, "cl").menge == 50
+        assert normalize("Mehl", 1, "kg").menge == 1000
+        assert normalize("Mehl", 100, "gr").einheit == "g"
+
+    def test_plurals_fold_to_the_singular(self):
+        from app.services.aggregation import normalize
+
+        for singular, plural in (("Scheibe", "Scheiben"), ("Zehe", "Zehen"), ("Dose", "Dosen"),
+                                 ("Tasse", "Tassen"), ("Packung", "Packungen")):
+            assert normalize("X", 1, plural).einheit == singular, plural
+
+    def test_two_spellings_of_the_same_unit_merge_into_one_line(
+        self, client, logged_in, mock_ai, db_session
+    ):
+        """End to end: the symptom this fixes is a duplicated line."""
+        from app.models import ShoppingListItem
+
+        client.post("/api/v1/shopping/items", json={"name": "Tomate", "menge": 2, "einheit": "Stk."},
+                    headers=logged_in)
+        client.post("/api/v1/shopping/items", json={"name": "Tomate", "menge": 1, "einheit": "Stück"},
+                    headers=logged_in)
+        items = client.get("/api/v1/shopping").json()["items"]
+        tomaten = [i for i in items if i["name"].lower() == "tomate"]
+        assert len(tomaten) == 1, f"split into {len(tomaten)} lines: {tomaten}"
+        assert tomaten[0]["menge"] == 3
+
+    def test_an_unknown_unit_is_kept_verbatim(self):
+        from app.services.aggregation import normalize
+
+        assert normalize("Sternanis", 2, "Sterne").einheit == "Sterne"
+
+    def test_adding_the_same_thing_twice_by_hand_merges(self, client, logged_in):
+        """The recipe path always merged; the manual one appended blindly, so
+        typing "Tomate" twice left two identical lines."""
+        client.post("/api/v1/shopping/items", json={"name": "Tomate"}, headers=logged_in)
+        client.post("/api/v1/shopping/items", json={"name": "tomate"}, headers=logged_in)
+        items = client.get("/api/v1/shopping").json()["items"]
+        assert len([i for i in items if i["name"].lower() == "tomate"]) == 1
+
+    def test_a_checked_line_is_not_merged_into(self, client, logged_in):
+        """Something already ticked off is done — a new need starts a new line."""
+        first = client.post("/api/v1/shopping/items", json={"name": "Butter", "menge": 100, "einheit": "g"},
+                            headers=logged_in).json()
+        client.patch(f"/api/v1/shopping/items/{first['id']}", json={"checked": True}, headers=logged_in)
+        client.post("/api/v1/shopping/items", json={"name": "Butter", "menge": 50, "einheit": "g"},
+                    headers=logged_in)
+        items = client.get("/api/v1/shopping").json()["items"]
+        assert len([i for i in items if i["name"] == "Butter"]) == 2

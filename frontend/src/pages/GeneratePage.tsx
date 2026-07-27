@@ -280,7 +280,10 @@ export function GeneratePage() {
           ) : (
             <Button variant="text" onClick={cancelGeneration}>← {t('stream.newRecipe')}</Button>
           )}
-          {gen.unlimited ? (
+          {/* Read the key state from `me`, not from the finished generation:
+              the store only learns it at `saved`, so removing or adding a key
+              afterwards would leave the wrong budget on screen. */}
+          {me?.own_key?.active ? (
             <span className="muted">
               <Icon name="key" size={14} /> {t('stream.unlimitedToday')}
             </span>

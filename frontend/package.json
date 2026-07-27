@@ -38,5 +38,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/pepperonas/zauberkoch-pwa.git"
+  },
+  "overrides": {
+    "postcss": "^8.5.18"
   }
 }

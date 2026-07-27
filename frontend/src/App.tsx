@@ -17,6 +17,7 @@ import { SupportPrompt } from './components/SupportPrompt';
 import { IconButton } from './components/ui';
 import { strings, t } from './i18n';
 import { api } from './lib/api';
+import { clearApiCache, LAST_ACCOUNT_KEY, shouldClearApiCache } from './lib/apiCache';
 import { spring } from './motion/springs';
 import { cancelGeneration, getGeneration } from './state/generation';
 import { useApp } from './state/app';
@@ -109,6 +110,19 @@ function Shell() {
   useEffect(() => {
     if (crtOn && (reduced || (!meLoading && !me))) setCrtOn(false);
   }, [crtOn, reduced, meLoading, me]);
+
+  // The service worker's API cache holds ONE account's recipes under URLs that
+  // are the same for everybody. Drop it whenever the signed-in identity really
+  // changes (sign-out, or a different account appearing) — but never on a
+  // plain page load, which would leave nothing readable offline.
+  useEffect(() => {
+    if (meLoading) return;
+    const current = me ? String(me.id) : '';
+    const previous = localStorage.getItem(LAST_ACCOUNT_KEY) ?? '';
+    if (previous === current) return;
+    if (shouldClearApiCache(previous, current)) clearApiCache();
+    localStorage.setItem(LAST_ACCOUNT_KEY, current);
+  }, [me, meLoading]);
 
   const handleLogout = () => {
     if (reduced) {

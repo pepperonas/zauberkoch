@@ -1,7 +1,7 @@
 /* Zauberkoch Service Worker.
  * Cache version — BUMP on every app-shell change (+ update CLAUDE.md).
  */
-const CACHE = 'zauberkoch-v103';
+const CACHE = 'zauberkoch-v104';
 const API_CACHE = 'zauberkoch-api-v1';
 const SHELL = ['/', '/icon.svg', '/manifest.webmanifest', '/theme-init.js', '/fonts/inter.woff2', '/fonts/bricolage.woff2'];
 
@@ -17,6 +17,15 @@ self.addEventListener('activate', (event) => {
     ),
   );
   self.clients.claim();
+});
+
+// The API cache holds ONE account's recipes. It must not survive a change of
+// account: on a shared device the next person, once offline, would be served
+// the previous one's list from `caches.match()` — same URL for every user.
+// The app posts {type:'zk-clear-api-cache'} on login and on logout.
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'zk-clear-api-cache') return;
+  event.waitUntil(caches.delete(API_CACHE));
 });
 
 self.addEventListener('fetch', (event) => {
