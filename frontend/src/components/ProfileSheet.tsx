@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { t } from '../i18n';
+import { strings, t } from '../i18n';
 import { api, ApiRequestError } from '../lib/api';
 import type { Preferences } from '../lib/types';
 import { useApp } from '../state/app';
@@ -24,6 +24,7 @@ interface Props {
 
 export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const { me, refreshMe } = useApp();
+  const ownKey = me?.own_key;
   const { show } = useSnackbar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [input, setInput] = useState('');
@@ -31,6 +32,9 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [keyInput, setKeyInput] = useState('');
+  const [keyBusy, setKeyBusy] = useState(false);
+  const [keyError, setKeyError] = useState('');
 
   useEffect(() => {
     if (open && me) setPrefs({ ...me.preferences });
@@ -54,6 +58,36 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
     refreshMe();
     onClose();
     show(t('profile.saved'));
+  };
+
+  const saveKey = async () => {
+    setKeyBusy(true);
+    setKeyError('');
+    try {
+      await api.setAnthropicKey(keyInput.trim());
+      setKeyInput(''); // the key leaves the browser and never comes back
+      refreshMe();
+      show(t('profile.keySaved'));
+    } catch (e) {
+      const status = e instanceof ApiRequestError ? e.status : 0;
+      const msg = e instanceof ApiRequestError ? e.error.message : '';
+      setKeyError(status === 422 ? msg || t('profile.keyInvalid') : t('profile.keyFailed'));
+    } finally {
+      setKeyBusy(false);
+    }
+  };
+
+  const removeKey = async () => {
+    setKeyBusy(true);
+    try {
+      await api.removeAnthropicKey();
+      refreshMe();
+      show(t('profile.keyRemoved'));
+    } catch {
+      setKeyError(t('profile.keyFailed'));
+    } finally {
+      setKeyBusy(false);
+    }
   };
 
   const exportData = async () => {
@@ -183,6 +217,53 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
 
         <Button onClick={() => void save()}>{t('common.save')}</Button>
         <Button variant="text" onClick={() => void logout()}><Icon name="power" size={18} /> {t('auth.logout')}</Button>
+
+        <div className="profile__data stack">
+          <span className="wiz__row-label">
+            <Icon name="key" size={16} /> {t('profile.keyTitle')}
+          </span>
+          <p className="muted profile__data-hint">{t('profile.keyIntro')}</p>
+          {ownKey?.active ? (
+            <>
+              <p className="profile__key-active">
+                <Icon name="checkCircle" size={16} /> {strings.profile.keyActive(ownKey.hint)}
+              </p>
+              <p className="muted profile__data-hint">{t('profile.keyUnlimited')}</p>
+              <Button variant="text" className="profile__delete" onClick={() => void removeKey()} disabled={keyBusy}>
+                <Icon name="trash" size={18} /> {t('profile.keyRemove')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <label>
+                <span className="wiz__row-label">{t('profile.keyLabel')}</span>
+                <input
+                  className="input"
+                  style={{ marginTop: 'var(--space-2)' }}
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder={t('profile.keyPlaceholder')}
+                />
+              </label>
+              {keyError && <p className="profile__warn">{keyError}</p>}
+              <Button onClick={() => void saveKey()} disabled={keyBusy || !keyInput.trim()}>
+                {keyBusy ? t('profile.keyChecking') : t('profile.keySave')}
+              </Button>
+            </>
+          )}
+          <p className="muted profile__data-hint">{t('profile.keySecurity')}</p>
+          <a
+            className="profile__key-link"
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('profile.keyGetLink')} <Icon name="link" size={14} />
+          </a>
+        </div>
 
         <div className="profile__data stack">
           <span className="wiz__row-label">{t('profile.dataTitle')}</span>

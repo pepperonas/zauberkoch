@@ -11,7 +11,7 @@ export interface StreamCallbacks {
   onSchritt?: (schritt: Schritt) => void;
   onTipp?: (tipp: string) => void;
   onDone?: (recipe: Recipe) => void;
-  onSaved?: (info: { recipe_id: number; cached: boolean; remaining: number }) => void;
+  onSaved?: (info: { recipe_id: number; cached: boolean; remaining: number | null; unlimited?: boolean }) => void;
   onError?: (error: ApiError) => void;
 }
 
@@ -84,7 +84,7 @@ function streamSSE(url: string, body: unknown, callbacks: StreamCallbacks): () =
             callbacks.onDone?.(payload as Recipe);
             break;
           case 'saved':
-            callbacks.onSaved?.(payload as { recipe_id: number; cached: boolean; remaining: number });
+            callbacks.onSaved?.(payload as { recipe_id: number; cached: boolean; remaining: number | null; unlimited?: boolean });
             break;
           case 'error':
             callbacks.onError?.(payload as ApiError);

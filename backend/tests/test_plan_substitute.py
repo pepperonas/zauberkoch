@@ -50,7 +50,7 @@ def test_substitute_returns_alternatives(client, logged_in, mock_ai, monkeypatch
 
     from app.api.v1 import recipes as recipes_module
 
-    async def fake_subst(recipe, zutat):
+    async def fake_subst(recipe, zutat, api_key=None):
         assert zutat == "Parmesan"
         return {"alternativen": [{"name": "Pecorino", "hinweis": "1:1 ersetzen, etwas salziger."}]}
 
@@ -64,7 +64,7 @@ def test_fridge_scan_flow(client, logged_in, monkeypatch):  # noqa: F811
     from app.api.v1 import recipes as recipes_module
     from app.core.config import get_settings  # noqa: F401
 
-    async def fake_scan(image, media_type):
+    async def fake_scan(image, media_type, api_key=None):
         assert media_type == "image/jpeg"
         return {"zutaten": ["Eier", "Paprika", "Milch"]}
 

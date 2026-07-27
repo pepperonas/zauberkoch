@@ -1,6 +1,6 @@
 /** Typed API client. Session lives in an httpOnly cookie; CSRF via header. */
 
-import type { AdminStats, AdminUser, AllowlistItem, ApiError, Me, Modus, Preferences, Recipe, RecipeDetail, RecipeListItem, ShoppingItem, GalleryItem, PlanWeek, SubstituteResult, SystemLimits } from './types';
+import type { AdminStats, AdminUser, AllowlistItem, ApiError, Me, Modus, OwnKey, Preferences, Recipe, RecipeDetail, RecipeListItem, ShoppingItem, GalleryItem, PlanWeek, SubstituteResult, SystemLimits } from './types';
 
 let csrfToken = '';
 
@@ -79,6 +79,10 @@ export const api = {
     a.remove();
     URL.revokeObjectURL(url);
   },
+  /** BYOK. The key travels once, on the way in — it is never returned. */
+  setAnthropicKey: (key: string) =>
+    request<OwnKey>('/me/anthropic-key', { method: 'PUT', body: JSON.stringify({ key }) }),
+  removeAnthropicKey: () => request<OwnKey>('/me/anthropic-key', { method: 'DELETE' }),
   deleteAccount: (password?: string) =>
     request<void>('/me', { method: 'DELETE', body: JSON.stringify({ confirm: true, password: password || null }) }),
   putPreferences: (prefs: Preferences) =>

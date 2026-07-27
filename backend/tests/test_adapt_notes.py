@@ -21,7 +21,7 @@ def mock_adapt(monkeypatch):
 
     calls: dict = {}
 
-    async def fake_adapt(recipe, anweisung):
+    async def fake_adapt(recipe, anweisung, api_key=None):
         calls["recipe"] = recipe
         calls["anweisung"] = anweisung
         adapted = {**recipe, "titel": recipe["titel"] + " (scharf)"}

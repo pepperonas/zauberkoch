@@ -280,7 +280,15 @@ export function GeneratePage() {
           ) : (
             <Button variant="text" onClick={cancelGeneration}>← {t('stream.newRecipe')}</Button>
           )}
-          {gen.remaining != null && <span className="muted">{strings.stream.remainingToday(gen.remaining)}</span>}
+          {gen.unlimited ? (
+            <span className="muted">
+              <Icon name="key" size={14} /> {t('stream.unlimitedToday')}
+            </span>
+          ) : (
+            gen.remaining != null && (
+              <span className="muted">{strings.stream.remainingToday(gen.remaining)}</span>
+            )
+          )}
         </div>
 
         {error && gen.phase === 'done' && (

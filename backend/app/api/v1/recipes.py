@@ -18,7 +18,7 @@ from app.models import Favorite, Generation, Recipe, User, utcnow
 from app.schemas.recipe import GenerateParams
 from app.api.v1.me import load_preferences
 from app.prompts import recipe_v5
-from app.services import ai, aggregation, cache, ratelimit
+from app.services import ai, aggregation, byok, cache, ratelimit
 from app.services.limits import get_limits
 from app.services.ratelimit_ip import check_ip_limit
 from app.services.json_stream import replay_events
@@ -30,6 +30,17 @@ router = APIRouter(prefix="/recipes")
 
 def _sse(event: str, data) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _usage_payload(db: DbSession, user_id: int, own_key: str | None) -> dict:
+    """What the `saved` event tells the client about today's budget.
+
+    With an own key there is no budget of ours to report — sending a countdown
+    would be a lie, and sending nothing would leave the old value on screen.
+    `unlimited` is the explicit signal the UI switches on."""
+    if own_key:
+        return {"unlimited": True, "used_today": 0, "daily_limit": None, "remaining": None}
+    return {"unlimited": False, **ratelimit.get_usage(db, user_id)}
 
 
 def owned_recipe(db: DbSession, recipe_id: int, user_id: int, *, include_deleted: bool = False) -> Recipe | None:
@@ -176,7 +187,13 @@ async def generate(
     if cached is None and known_titles:
         params = params.model_copy(update={"vermeiden_titel": known_titles})
 
-    if cached is None:
+    # Own key = own bill: our daily caps exist to bound OUR spending, so they
+    # do not apply. Resolved once here and threaded through — `byok.key_for`
+    # is the single predicate, so limit skipping and actual key usage can
+    # never disagree.
+    own_key = byok.key_for(user)
+
+    if cached is None and not own_key:
         # Real generation: consume the daily budget up front (cache hits are free)
         ratelimit.consume_generation(db, user.id)
 
@@ -197,6 +214,7 @@ async def generate(
                     prompt_version=current_version,
                     model=model,
                     cached=False,
+                    byok=bool(own_key),
                     status=status,
                     **(usage or {}),
                 )
@@ -206,7 +224,7 @@ async def generate(
                 return None
             cache.store(session, h, json.dumps(final, ensure_ascii=False), current_version, model)
             row = _persist_recipe(session, user_id, params, final, current_version, model)
-            return {"recipe_id": row.id, "cached": False, **ratelimit.get_usage(session, user_id)}
+            return {"recipe_id": row.id, "cached": False, **_usage_payload(session, user_id, own_key)}
         finally:
             session.close()
 
@@ -231,7 +249,7 @@ async def generate(
             _log_cache_hit(cached.prompt_version, cached.model)
             for name, data in replay_events(recipe):
                 yield _sse(name, data)
-            yield _sse("saved", {"recipe_id": row.id, "cached": True, **ratelimit.get_usage(db, user_id)})
+            yield _sse("saved", {"recipe_id": row.id, "cached": True, **_usage_payload(db, user_id, own_key)})
             return
 
         # Live path: producer task survives client disconnects, so the paid
@@ -244,7 +262,7 @@ async def generate(
             usage: dict | None = None
             failed = False
             try:
-                async for name, data in ai.generate_recipe_events(params):
+                async for name, data in ai.generate_recipe_events(params, api_key=own_key):
                     if name == "usage":
                         usage = data  # internal — never forwarded to the client
                         continue
@@ -497,7 +515,9 @@ async def adapt(
     if source is None:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Rezept nicht gefunden."})
 
-    ratelimit.consume_generation(db, user.id)
+    own_key = byok.key_for(user)
+    if not own_key:
+        ratelimit.consume_generation(db, user.id)
     recipe_dict = json.loads(source.recipe_json)
     user_id = user.id
     source_id = source.id
@@ -518,6 +538,7 @@ async def adapt(
                     prompt_version=current_version,
                     model=model,
                     cached=False,
+                    byok=bool(own_key),
                     status="ok" if final is not None else "error",
                     **(usage or {}),
                 )
@@ -539,7 +560,7 @@ async def adapt(
             )
             session.add(row)
             session.commit()
-            return {"recipe_id": row.id, "cached": False, **ratelimit.get_usage(session, user_id)}
+            return {"recipe_id": row.id, "cached": False, **_usage_payload(session, user_id, own_key)}
         finally:
             session.close()
 
@@ -551,7 +572,7 @@ async def adapt(
             usage: dict | None = None
             failed = False
             try:
-                async for name, data in ai.adapt_recipe_events(recipe_dict, anweisung):
+                async for name, data in ai.adapt_recipe_events(recipe_dict, anweisung, api_key=own_key):
                     if name == "usage":
                         usage = data
                         continue
@@ -637,7 +658,7 @@ async def substitute(
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Rezept nicht gefunden."})
     check_ip_limit(request, scope="substitute", limit=10, window_s=60)
     try:
-        return await ai.substitute_options(json.loads(row.recipe_json), body.zutat)
+        return await ai.substitute_options(json.loads(row.recipe_json), body.zutat, api_key=byok.key_for(user))
     except Exception:
         logger.exception("substitute failed")
         raise HTTPException(status_code=502, detail={"code": "substitute_failed", "message": "Gerade nicht möglich."})
@@ -660,14 +681,16 @@ async def fridge_scan(
 ) -> dict:
     """Photo of the fridge -> recognizable ingredients (vision, 5/day/user)."""
     check_ip_limit(request, scope="scan", limit=10, window_s=60)
-    ratelimit.consume_scoped(
-        db,
-        scope=f"scan:{user.id}",
-        limit=FRIDGE_SCANS_PER_DAY,
-        message="Foto-Scan-Limit für heute erreicht (5 pro Tag).",
-    )
+    own_key = byok.key_for(user)
+    if not own_key:
+        ratelimit.consume_scoped(
+            db,
+            scope=f"scan:{user.id}",
+            limit=FRIDGE_SCANS_PER_DAY,
+            message="Foto-Scan-Limit für heute erreicht (5 pro Tag).",
+        )
     try:
-        return await ai.fridge_scan(body.image, body.media_type)
+        return await ai.fridge_scan(body.image, body.media_type, api_key=own_key)
     except Exception:
         logger.exception("fridge scan failed")
         raise HTTPException(status_code=502, detail={"code": "scan_failed", "message": "Scan gerade nicht möglich."})

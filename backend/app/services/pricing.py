@@ -118,9 +118,10 @@ def cost_usd(
 
 
 def generation_cost(row) -> float:
-    """Cost of one `Generation` row. Cache hits cost nothing — they never
-    reached the API."""
-    if row.cached:
+    """Cost of one `Generation` row, from OUR point of view. Two kinds are
+    free for us: cache hits (never reached the API) and BYOK runs (real tokens,
+    paid by the user's own key)."""
+    if row.cached or getattr(row, "byok", False):
         return 0.0
     return cost_usd(
         row.model,

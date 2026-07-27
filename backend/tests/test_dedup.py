@@ -45,7 +45,7 @@ def scripted_ai(monkeypatch):
     """AI mock whose titles are a scripted queue; records every call's params."""
     state = {"titles": [], "calls": []}
 
-    async def fake_events(params):
+    async def fake_events(params, api_key=None):
         state["calls"].append(params)
         titel = state["titles"].pop(0) if state["titles"] else BASE["titel"]
         for ev in replay_events({**BASE, "titel": titel}):

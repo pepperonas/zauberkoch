@@ -138,3 +138,36 @@ test('print view hides the app chrome and keeps the recipe', async ({ page }) =>
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bg).toBe('rgb(255, 255, 255)');
 });
+
+test('own Anthropic key: stored, shown masked, removable', async ({ page }) => {
+  const KEY = 'sk-ant-api03-' + 'A'.repeat(60);
+  let sent: string | null = null;
+  let active = false;
+
+  await page.route('**/api/v1/me', (route) =>
+    route.fulfill({ json: { ...ME, own_key: { active, hint: active ? KEY.slice(-4) : '', since: null } } }),
+  );
+  await page.route('**/api/v1/me/anthropic-key', async (route) => {
+    if (route.request().method() === 'PUT') {
+      sent = (route.request().postDataJSON() as { key: string }).key;
+      active = true;
+      return route.fulfill({ json: { active: true, hint: KEY.slice(-4), since: null } });
+    }
+    active = false;
+    return route.fulfill({ json: { active: false, hint: '', since: null } });
+  });
+  await page.route('**/api/v1/recipes?**', (route) => route.fulfill({ json: { items: [] } }));
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Profil/ }).first().click();
+  await page.getByLabel('API-Schlüssel').fill(KEY);
+  await page.getByRole('button', { name: 'Schlüssel speichern' }).click();
+
+  // The key goes out once and the field is cleared — it never comes back.
+  await expect.poll(() => sent).toBe(KEY);
+  await expect(page.getByText(/Aktiv · endet auf AAAA/)).toBeVisible();
+  await expect(page.getByLabel('API-Schlüssel')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /Schlüssel entfernen/ }).click();
+  await expect(page.getByLabel('API-Schlüssel')).toBeVisible();
+});

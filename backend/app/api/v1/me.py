@@ -29,6 +29,7 @@ from app.models import (
     User,
 )
 from app.schemas.recipe import Preferences
+from app.services import ai, byok
 from app.services.passwords import verify_password
 
 router = APIRouter(prefix="/me")
@@ -55,6 +56,8 @@ def me(request: Request, db: DbSession = Depends(get_db)) -> dict:
         # Drives the delete-account dialog: only a password account can be asked
         # to re-authenticate.
         "has_password": user.password_hash is not None,
+        # Own Anthropic key: active + last 4 chars, never the key itself.
+        "own_key": byok.status_for(user),
         "csrf_token": session.csrf_token,
         "preferences": load_preferences(user).model_dump(),
     }
@@ -84,6 +87,47 @@ def put_preferences(
     user.preferences_json = prefs.model_dump_json()
     db.commit()
     return {"preferences": prefs.model_dump()}
+
+
+class AnthropicKeyBody(BaseModel):
+    key: str
+
+
+@router.put("/anthropic-key", dependencies=[Depends(require_csrf)])
+async def set_anthropic_key(
+    body: AnthropicKeyBody,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+) -> dict:
+    """Store an own Anthropic key (BYOK) — encrypted, after proving it works.
+
+    Validation is a `models.list()` call on the user's key: authenticated, but
+    free of tokens, so checking costs its owner nothing. Rejecting a broken key
+    here is what keeps the failure out of the middle of a generation.
+    """
+    key = body.key.strip()
+    if not byok.looks_like_key(key):
+        raise HTTPException(
+            status_code=422,
+            detail="Das sieht nicht nach einem Anthropic-Schlüssel aus (beginnt mit „sk-ant-“).",
+        )
+    if not await ai.verify_key(key):
+        raise HTTPException(
+            status_code=422,
+            detail="Anthropic akzeptiert diesen Schlüssel nicht. Bitte prüfe ihn in der Console.",
+        )
+    byok.store_key(user, key, datetime.now(timezone.utc))
+    db.commit()
+    return byok.status_for(user)
+
+
+@router.delete("/anthropic-key", dependencies=[Depends(require_csrf)])
+def delete_anthropic_key(
+    user: User = Depends(get_current_user), db: DbSession = Depends(get_db)
+) -> dict:
+    byok.clear_key(user)
+    db.commit()
+    return byok.status_for(user)
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -124,6 +168,7 @@ def export_data(user: User = Depends(get_current_user), db: DbSession = Depends(
         select(Generation).where(Generation.user_id == user.id).order_by(Generation.created_at)
     ).scalars().all()
 
+    key_status = byok.status_for(user)
     methoden = []
     if user.google_sub:
         methoden.append("google")
@@ -146,6 +191,13 @@ def export_data(user: User = Depends(get_current_user), db: DbSession = Depends(
             "email_bestaetigt_am": _iso(user.email_verified_at),
             "volljaehrigkeit_bestaetigt_am": _iso(user.adult_confirmed_at),
             "tageslimit": user.daily_limit,
+            # Deliberately the status, never the key: an export file is copied
+            # around and mailed — a live API credential has no business in it.
+            "eigener_api_key": {
+                "aktiv": key_status["active"],
+                "endet_auf": key_status["hint"],
+                "hinterlegt_am": key_status["since"],
+            },
         },
         "einstellungen": load_preferences(user).model_dump(),
         "rezepte": [

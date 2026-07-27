@@ -85,6 +85,19 @@ export function DatenschutzPage() {
         <strong>nicht gespeichert</strong>. Bitte fotografiere keine Personen oder sensiblen Dokumente.
       </p>
 
+      <h3>Optionaler eigener API-Schlüssel</h3>
+      <p>
+        Du kannst freiwillig einen eigenen Anthropic-API-Schlüssel hinterlegen; dann laufen die
+        Anfragen über dein Anthropic-Konto und ohne unser Tageslimit. Wir speichern den Schlüssel{' '}
+        <strong>verschlüsselt</strong> (AES-256-GCM), geben ihn nie an deinen Browser oder Dritte
+        zurück und zeigen dir nur die letzten vier Zeichen, damit du erkennst, welcher Schlüssel
+        hinterlegt ist. Er erscheint auch nicht in deinem Datenexport. Rechtsgrundlage ist deine
+        Einwilligung durch die Eingabe (Art. 6 Abs. 1 lit. a DSGVO); du kannst ihn jederzeit im
+        Profil entfernen, womit er sofort gelöscht wird. Für die Nutzung deines Schlüssels gelten
+        zusätzlich die Bedingungen von Anthropic dir gegenüber; abgerechnet wird über dein dortiges
+        Konto.
+      </p>
+
       <h2>8. Inhalte deines Kontos</h2>
       <p>
         Generierte Rezepte, Favoriten, Notizen, Feedback, Wochenpläne, Einkaufslisten, Vorräte und

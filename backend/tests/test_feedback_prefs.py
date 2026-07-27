@@ -44,9 +44,9 @@ def test_preferences_roundtrip_and_merge(client, logged_in, mock_ai, monkeypatch
 
     original = recipes_module.ai.generate_recipe_events
 
-    def spy(params):
+    def spy(params, api_key=None):
         captured["params"] = params
-        return original(params)
+        return original(params, api_key=api_key)
 
     monkeypatch.setattr(recipes_module.ai, "generate_recipe_events", spy)
     generate(client, logged_in)

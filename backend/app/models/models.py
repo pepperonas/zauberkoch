@@ -39,6 +39,15 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     adult_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     preferences_json: Mapped[str] = mapped_column(Text, default="{}")
+    # Optional own Anthropic key (BYOK): while one is stored, this account
+    # generates on its own bill and without our daily caps. Stored AES-256-GCM
+    # encrypted (services/secretbox.py) — never returned to any client; the UI
+    # only ever sees `hint` (last 4 characters).
+    anthropic_key_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    anthropic_key_hint: Mapped[str] = mapped_column(String(8), default="", server_default="")
+    anthropic_key_set_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # Per-user daily generation cap. NULL = fall back to the global default
     # (daily_limit_per_user). New accounts are created with an explicit small value.
     daily_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -138,6 +147,9 @@ class Generation(Base):
     prompt_version: Mapped[str] = mapped_column(String(32))
     model: Mapped[str] = mapped_column(String(64))
     cached: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Ran on the user's own API key — real tokens were spent, but not by us.
+    # Costed at 0 so the dashboard keeps showing OUR bill (services/pricing.py).
+    byok: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     status: Mapped[str] = mapped_column(String(16), default="ok")  # ok | error
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)

@@ -100,6 +100,8 @@ export interface Me {
   adult_confirmed: boolean;
   /** True for accounts with a password — they re-authenticate before deletion. */
   has_password: boolean;
+  /** Own Anthropic key: status only, never the key itself. */
+  own_key: OwnKey;
   csrf_token: string;
   preferences: Preferences;
 }
@@ -117,6 +119,13 @@ export interface RecipeListItem {
   glas?: string | null;
   is_favorite: boolean;
   created_at: string;
+}
+
+export interface OwnKey {
+  active: boolean;
+  /** Last 4 characters, so the UI can name the stored key. */
+  hint: string;
+  since: string | null;
 }
 
 export interface RecipeDetail {

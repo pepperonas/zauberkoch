@@ -27,20 +27,43 @@ _client: AsyncAnthropic | None = None
 _LLM_SCHEMA = recipe_llm_schema()
 
 
-def get_client() -> AsyncAnthropic:
+def get_client(api_key: str | None = None) -> AsyncAnthropic:
+    """The shared project client, or a throwaway one for a user-supplied key.
+
+    BYOK clients are deliberately NOT cached: a per-key client pool would keep
+    other people's credentials alive in memory for as long as the process runs.
+    One extra TLS handshake per generation is a fair price.
+    """
+    if api_key:
+        return AsyncAnthropic(api_key=api_key)
     global _client
     if _client is None:
         _client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
     return _client
 
 
-async def generate_recipe_events(params: GenerateParams) -> AsyncGenerator[Event, None]:
+async def verify_key(api_key: str) -> bool:
+    """Is this key usable? Uses models.list() — an authenticated call that
+    costs no tokens, so validating a key is free for its owner."""
+    client = AsyncAnthropic(api_key=api_key, max_retries=0)
+    try:
+        await client.models.list(limit=1)
+        return True
+    except Exception:  # noqa: BLE001 — any failure means "unusable", no detail
+        return False
+    finally:
+        await client.close()
+
+
+async def generate_recipe_events(
+    params: GenerateParams, api_key: str | None = None
+) -> AsyncGenerator[Event, None]:
     settings = get_settings()
     parser = RecipeStreamParser()
     started = time.monotonic()
     usage_event: Event | None = None
     try:
-        async with get_client().messages.stream(
+        async with get_client(api_key).messages.stream(
             model=settings.anthropic_model,
             max_tokens=settings.anthropic_max_tokens,
             thinking={"type": "disabled"},
@@ -89,7 +112,9 @@ ADAPT_PROMPT = (
 )
 
 
-async def adapt_recipe_events(recipe: dict, anweisung: str) -> AsyncGenerator[Event, None]:
+async def adapt_recipe_events(
+    recipe: dict, anweisung: str, api_key: str | None = None
+) -> AsyncGenerator[Event, None]:
     """Adapt an existing recipe per user instruction — same cached system
     prompt, same structured output, streamed through the same parser."""
     import json as _json
@@ -101,7 +126,7 @@ async def adapt_recipe_events(recipe: dict, anweisung: str) -> AsyncGenerator[Ev
     clean = " ".join(anweisung.split())
     prompt = ADAPT_PROMPT.format(recipe=_json.dumps(recipe, ensure_ascii=False), anweisung=clean)
     try:
-        async with get_client().messages.stream(
+        async with get_client(api_key).messages.stream(
             model=settings.anthropic_model,
             max_tokens=settings.anthropic_max_tokens,
             thinking={"type": "disabled"},
@@ -170,7 +195,7 @@ SUBST_PROMPT = (
 )
 
 
-async def substitute_options(recipe: dict, zutat: str) -> dict:
+async def substitute_options(recipe: dict, zutat: str, api_key: str | None = None) -> dict:
     """One small structured call: 2-3 substitutes for a missing ingredient."""
     import json as _json
 
@@ -180,7 +205,7 @@ async def substitute_options(recipe: dict, zutat: str) -> dict:
         "zutaten": [z.get("name") for z in recipe.get("zutaten", [])],
     }
     prompt = SUBST_PROMPT.format(recipe=_json.dumps(compact, ensure_ascii=False), zutat=" ".join(zutat.split())[:60])
-    message = await get_client().messages.create(
+    message = await get_client(api_key).messages.create(
         model=settings.anthropic_model,
         max_tokens=400,
         thinking={"type": "disabled"},
@@ -205,12 +230,12 @@ SCAN_PROMPT = (
 )
 
 
-async def fridge_scan(image_b64: str, media_type: str) -> dict:
+async def fridge_scan(image_b64: str, media_type: str, api_key: str | None = None) -> dict:
     """Vision: photo -> list of recognizable ingredients (small, capped call)."""
     import json as _json
 
     settings = get_settings()
-    message = await get_client().messages.create(
+    message = await get_client(api_key).messages.create(
         model=settings.anthropic_model,
         max_tokens=500,
         thinking={"type": "disabled"},

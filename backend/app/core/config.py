@@ -35,6 +35,9 @@ class Settings(BaseSettings):
 
     # Sessions & security
     session_secret: str = ""
+    # Optional dedicated wrapping key for user-supplied Anthropic keys
+    # (services/secretbox.py). Empty -> derived from session_secret via HKDF.
+    byok_secret: str = ""
     session_ttl_hours: int = 720
 
     # Access & limits

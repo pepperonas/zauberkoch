@@ -33,11 +33,12 @@ def mock_ai(monkeypatch):
     from app.api.v1 import recipes as recipes_module
     from app.services.json_stream import replay_events
 
-    calls = {"count": 0}
+    calls = {"count": 0, "last_api_key": None}
 
-    async def fake_events(params: GenerateParams):
+    async def fake_events(params: GenerateParams, api_key=None):
         calls["count"] += 1
         calls["last_params"] = params
+        calls["last_api_key"] = api_key  # BYOK: which key actually ran
         recipe = dict(RECIPE)
         if params.regenerate:
             recipe = {**RECIPE, "titel": "Variante: " + RECIPE["titel"]}

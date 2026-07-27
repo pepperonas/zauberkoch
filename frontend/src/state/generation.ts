@@ -21,6 +21,8 @@ export interface GenerationState {
   recipeId: number | null;
   isFavorite: boolean;
   remaining: number | null;
+  /** Own Anthropic key active: no budget of ours to count down. */
+  unlimited: boolean;
   error: ApiError | null;
   lastEvent: GenEvent;
   /** False until the user has looked at the finished result (drives the pill). */
@@ -45,6 +47,7 @@ const IDLE: GenerationState = {
   recipeId: null,
   isFavorite: false,
   remaining: null,
+  unlimited: false,
   error: null,
   lastEvent: 'start',
   seen: true,
@@ -100,7 +103,13 @@ export function startGeneration(runner: Runner, mode: Modus, opts: StartOpts = {
         lastEvent: 'done',
       }),
     onSaved: (info) => {
-      set({ phase: 'done', recipeId: info.recipe_id, remaining: info.remaining, lastEvent: 'saved' });
+      set({
+        phase: 'done',
+        recipeId: info.recipe_id,
+        remaining: info.remaining,
+        unlimited: !!info.unlimited,
+        lastEvent: 'saved',
+      });
       recordGeneration(); // feeds the gentle "support Zauberkoch" nudge
       lastOnSaved?.();
     },
@@ -137,7 +146,7 @@ export function regenerateGeneration(): void {
 export function cancelGeneration(): void {
   abort?.();
   abort = null;
-  set({ ...IDLE, remaining: state.remaining });
+  set({ ...IDLE, remaining: state.remaining, unlimited: state.unlimited });
 }
 
 export function markGenerationSeen(): void {

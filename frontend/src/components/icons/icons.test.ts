@@ -14,7 +14,7 @@ const EXPECTED = [
   // navigation & shell
   'calendar', 'star', 'starOff', 'history', 'cart', 'sun', 'moon', 'shield', 'user', 'power',
   // actions
-  'share', 'copy', 'download', 'print', 'link', 'edit', 'settings', 'camera', 'trash', 'broom', 'mic', 'dice',
+  'share', 'copy', 'download', 'print', 'key', 'link', 'edit', 'settings', 'camera', 'trash', 'broom', 'mic', 'dice',
   'gift', 'ticket', 'heart', 'mail', 'tools', 'thumbUp', 'thumbDown', 'image', 'note',
   // kitchen & bar
   'chefhat', 'pan', 'cocktail', 'glass', 'plate', 'herb', 'bulb',

@@ -22,3 +22,5 @@
 .profile__data-hint { font: var(--type-label-sm); margin: calc(var(--space-1) * -1) 0 0; }
 .profile__delete { color: var(--c-error); align-self: flex-start; }
 .profile__warn { color: var(--c-error); font: var(--type-body); margin: 0; }
+.profile__key-active { display: flex; align-items: center; gap: var(--space-2); color: var(--c-primary); font: var(--type-body); margin: 0; }
+.profile__key-link { display: inline-flex; align-items: center; gap: var(--space-1); font: var(--type-label-sm); color: var(--c-on-surface-variant); }
