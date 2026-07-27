@@ -49,6 +49,43 @@ Port 8742 vor der Einrichtung auf Kollision prüfen: `ssh root@69.62.121.168 'ss
 
 Alle statischen Brand-Assets in `frontend/public/` (`icon.svg`, `favicon.ico`, `favicon-16/32.png`, `apple-touch-icon.png`, `icon-192/512.png`, `icon-maskable-512.png`, `og-v2.png`) werden aus EINEM Master-Logo generiert: `cd frontend && npm run gen:assets` (`scripts/generate-assets.mjs`, Playwright-Chromium, kein `sharp`). Die Farb-Single-Source-of-Truth ist das `COLORS`-Objekt im Script (spiegelt `tokens.css`). **Theme-Wechsel = `COLORS` ändern + `npm run gen:assets` + committen**; der Deploy rsync't `public/` nur, er generiert nichts. Bei OG-Änderung den Dateinamen versionieren (`og-v2` → `og-v3`, FB/LinkedIn-Cache) und `index.html`-Meta nachziehen. Visuelle Abnahme: `frontend/scripts/asset-preview.html`. Details: CLAUDE.md → „Brand-Assets".
 
+## Secrets & optionale Konfiguration
+
+| Variable | Pflicht | Zweck |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | ja | Projekt-Schlüssel für alle Generierungen ohne eigenen Nutzer-Key |
+| `SESSION_SECRET` | ja | Signiert Sessions + zustandslose Verify-/Reset-Tokens (`openssl rand -hex 32`) |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | für Google-Login | leer ⇒ nur E-Mail/Passwort-Anmeldung |
+| `SMTP_HOST/PORT/USER/PASS/FROM` | für E-Mail-Auth | leer ⇒ Mailer ist ein No-Op mit Warnung (dev/tests fassen nie das Netz an) |
+| `BYOK_SECRET` | nein | Eigener Wrapping-Key für hinterlegte Nutzer-API-Schlüssel |
+| `ZK_ADMIN_EMAILS` | nein | Schaltet das Admin-Panel frei |
+
+**Zu `BYOK_SECRET`:** Nutzer können einen eigenen Anthropic-Schlüssel hinterlegen; der wird
+AES-256-GCM-verschlüsselt gespeichert (`app/services/secretbox.py`). Ist `BYOK_SECRET` leer, wird
+der Wrapping-Key per HKDF aus `SESSION_SECRET` abgeleitet — es funktioniert also ohne Zutun.
+Getrennte Secrets sind trotzdem die bessere Wahl: dann kompromittiert ein geleaktes
+`SESSION_SECRET` nicht auch die hinterlegten Schlüssel.
+
+⚠️ **Den Wert nur setzen oder ändern, solange kein Nutzer einen Schlüssel hinterlegt hat.** Eine
+Rotation macht bestehende Schlüssel unlesbar; die App behandelt das gnädig (das Konto fällt auf
+den Projekt-Schlüssel und die normalen Tageslimits zurück, statt zu brechen), die Betroffenen
+müssen ihren Schlüssel aber neu eingeben.
+
+## Migrationen
+
+`deploy.sh` führt `alembic upgrade head` auf dem VPS aus — ein separater Schritt ist nicht nötig.
+Bei Migrationen, die eine Tabelle umbauen (SQLite kann Constraints nicht in-place ändern, daher
+`batch_alter_table`), vorher gegen eine Kopie der Prod-DB testen:
+
+```bash
+scp root@69.62.121.168:/opt/zauberkoch-api/data/zauberkoch.db /tmp/probe.db
+cd backend && ZK_DB_PATH=/tmp/probe.db .venv/bin/alembic upgrade head
+sqlite3 /tmp/probe.db "SELECT sql FROM sqlite_master WHERE name='<tabelle>';"
+```
+
+Neue Dependencies (zuletzt `cryptography` für die BYOK-Verschlüsselung) installiert der Deploy
+über `pip install -r requirements.txt` mit; auf dem VPS ist dafür ein passendes Wheel nötig.
+
 ## Regel-Deploy
 
 `./deploy/deploy.sh [backend|frontend|all]` — erzwingt vorher `pytest` + `npm test`. Details in `deploy/deploy.sh` und `.claude/skills/deploy/`.

@@ -47,9 +47,12 @@ Küche wählen, Geschmack wählen, Rahmenbedingungen setzen — der Zauberkoch s
 - 🎞️ **Shared-Element-Navigation** — Grafik und Titel wandern per **Material Container Transform** (native View Transitions API) in die Detailansicht — aus der Rezeptliste, dem Wochenplaner und der Einkaufsliste; Tabs faden through, Zurück morpht zurück — **auch der Browser-Back-Button auf Mobile** (react-router Data-Router-View-Transitions), alles GPU-composited (nur `transform`/`opacity`)
 - 📺 **CRT-Abschalt-Logout** — beim Abmelden kollabiert der Screen wie ein alter Röhrenfernseher (Scanline → Punkt → Ausglühen), theme-bewusst und `prefers-reduced-motion`-fest
 - 💬 **Erklärende Hover-Tooltips** an den Aktions-Buttons (Desktop, `prefers-reduced-motion`-fest)
+- 🔑 **Eigener Anthropic-Schlüssel (BYOK)** — optional den eigenen API-Key hinterlegen und ohne Tageslimit zaubern; der Schlüssel wird AES-256-GCM-verschlüsselt gespeichert, nie angezeigt und nie an den Browser zurückgegeben (nur die letzten vier Zeichen)
+- 📤 **Datenexport & Konto-Löschung in der App** — Auskunft und Übertragbarkeit als eine JSON-Datei, Löschung mit einem Klick (DSGVO Art. 15/17/20, ohne E-Mail-Anfrage)
+- 🖨️ **Druckansicht** — Rezept als Küchenblatt oder PDF, schwarz auf weiß, ohne App-Rahmen; geschriebene Notizen kommen mit, leere Felder nicht
 - 🛡️ **Admin-Panel** — Nutzungs-/Kosten-Dashboard (Generierungen, Tokens, Cache-Quote, Feedback pro Prompt-Version) + Allowlist-Verwaltung, per `ZK_ADMIN_EMAILS` freigeschaltet
 - 📲 **PWA** — installierbar, Favoriten offline lesbar, unaufdringlicher Offline-Indikator statt Fehlerseiten
-- 🔐 Google OAuth (PKCE, server-seitig), httpOnly-Sessions, CSRF-Schutz, Tageslimits pro User + global
+- 🔐 **Zwei Anmeldewege** — Google OAuth (PKCE, server-seitig) **und** E-Mail/Passwort (scrypt, Double-Opt-in, Passwort-Reset); httpOnly-Sessions, CSRF-Schutz, Tageslimits pro User + global
 - 🚀 **Lighthouse 99 / 100 / 100 / 100** (Performance / Accessibility / Best Practices / SEO, gemessen gegen Prod)
 
 ## Stack
@@ -59,7 +62,8 @@ Küche wählen, Geschmack wählen, Rahmenbedingungen setzen — der Zauberkoch s
 | Backend | Python 3.12 · FastAPI · SQLite (WAL) · SQLAlchemy 2 · Alembic |
 | KI | Anthropic API (`claude-sonnet-5`, per env tauschbar) · Streaming · Structured Outputs · Prompt-Caching |
 | Frontend | React 19 · Vite · TypeScript strict · TanStack Query · Motion |
-| Auth | Google OAuth 2.0 (Authorization Code + PKCE) · httpOnly-Cookies |
+| Auth | Google OAuth 2.0 (Authorization Code + PKCE) · E-Mail/Passwort (scrypt) · httpOnly-Cookies |
+| Krypto | scrypt (Passwörter) · HMAC (zustandslose Tokens) · AES-256-GCM (hinterlegte API-Schlüssel) |
 | Deploy | systemd + nginx (SSE-tauglich) · Let's Encrypt |
 
 ## Lokales Setup
@@ -95,12 +99,22 @@ Google-OAuth-Einrichtung: [`docs/GOOGLE-OAUTH.md`](docs/GOOGLE-OAUTH.md) · Depl
 ## Tests
 
 ```bash
-cd backend && pytest             # 127 Tests: Auth, Rate-Limits, Cache, SSE-Parser, KI-Orchestrierung, Prompts, Share/OG …
-cd backend && pytest --cov=app   # mit Coverage-Report (Stand 2026-07-19: 95 % Statements)
-cd frontend && npm test          # 78 Tests: Mengen-Skalierung, Einheiten, i18n, SSE-Client, Theme-Toggle, Stores
-cd frontend && npm test -- --coverage   # Stand 2026-07-19: 20 % projektweit — bewusst: Units decken die Logik-Schicht (lib/state/i18n, je ~55–60 %), die React-UI-Flächen deckt der E2E-Smoke ab
-cd frontend && npx playwright test   # E2E-Smoke (lokal)
+cd backend && pytest             # 232 Tests: Auth (Google + E-Mail/Passwort), Rate-Limits, Cache & Dedup,
+                                 #   SSE-Parser, KI-Orchestrierung, Prompts, Share/OG, Kostenmodell,
+                                 #   Konto-Export/-Löschung, BYOK-Verschlüsselung
+cd backend && pytest --cov=app   # Coverage-Report (Stand 2026-07-27: 94 % Statements)
+cd frontend && npm test          # 115 Tests: Mengen-Skalierung, Einheiten, i18n, SSE-Client, API-Client,
+                                 #   Theme-Toggle, Stores, Zutaten-Katalog, Motive
+cd frontend && npm test -- --coverage   # Stand 2026-07-27: 21 % projektweit — bewusst: Units decken die
+                                        #   Logik-Schicht (lib/state/i18n), die React-UI-Flächen deckt E2E ab
+cd frontend && npx playwright test   # 8 E2E-Tests (lokal): Login → Generierung → Favorit, Export,
+                                     #   Konto-Löschung, BYOK-Dialog, Druckansicht
 ```
+
+**Sicherheitskritisches ist bewusst doppelt abgesichert:** Die Konto-Löschung prüft *jede*
+betroffene Tabelle einzeln, statt auf `ON DELETE CASCADE` zu vertrauen (SQLite erzwingt
+Fremdschlüssel nur mit `PRAGMA foreign_keys=ON`), und die BYOK-Tests behaupten explizit, dass
+weder `/me` noch der Datenexport je einen Schlüssel im Klartext enthalten.
 
 Alle Suiten laufen bei jedem Push als [GitHub Action](.github/workflows/ci.yml). Kein Test ruft die echte Anthropic-API auf.
 

@@ -97,3 +97,36 @@ class TestGenerationCost:
         """SQLite hands back naive datetimes even for tz-aware columns."""
         naive = _gen(created_at=datetime(2026, 9, 1), output_tokens=1_000_000)
         assert pricing.generation_cost(naive) == 15.00
+
+
+class TestEdges:
+    def test_no_date_means_today(self):
+        """`price_for(model)` without a date must not crash — it prices at
+        today's rate, which is what an ad-hoc estimate wants."""
+        from datetime import date as _date
+
+        today = _date.today()
+        assert pricing.price_for("claude-sonnet-5") == pricing.price_for("claude-sonnet-5", today)
+
+    def test_a_date_before_every_period_falls_back(self, monkeypatch):
+        """A schedule whose earliest entry starts in the future must still
+        return a price rather than raising — the dashboard shows a number, not
+        a stack trace."""
+        from datetime import date as _date
+
+        monkeypatch.setitem(
+            pricing._SCHEDULE, "future-model", [(_date(2099, 1, 1), pricing.Price(9.0, 9.0))]
+        )
+        p = pricing.price_for("future-model", _date(2026, 7, 1))
+        assert (p.input, p.output) == (3.00, 15.00)  # _FALLBACK
+
+    def test_offsets_are_converted_to_utc_not_truncated(self):
+        """01:30 on Sep 1 in Berlin is still Aug 31 in UTC — and UTC is what
+        decides, consistently with the daily limits and Anthropic's own
+        accounting. Truncating the local date instead would charge the new
+        price two hours early."""
+        from datetime import datetime as _dt, timedelta, timezone as _tz
+
+        berlin_just_after_midnight = _dt(2026, 9, 1, 1, 30, tzinfo=_tz(timedelta(hours=2)))
+        p = pricing.price_for("claude-sonnet-5", berlin_just_after_midnight)
+        assert (p.input, p.output) == (2.00, 10.00)

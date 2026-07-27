@@ -193,3 +193,46 @@ class TestPasswordAccounts:
         assert _delete(client, headers, password="Kochtopf-2026!").status_code == 204
         db_session.expire_all()
         assert db_session.execute(select(User)).scalars().all() == []
+
+
+class TestExportRobustness:
+    """The export must survive rows that are not pristine — it is the one
+    endpoint a user reaches for when something already went wrong."""
+
+    def test_corrupt_recipe_json_does_not_break_the_export(
+        self, client, logged_in, mock_ai, db_session
+    ):
+        generate(client, logged_in)
+        row = db_session.execute(select(Recipe)).scalars().all()[0]
+        row.recipe_json = "{not json"
+        db_session.commit()
+
+        data = _export(client).json()
+        # Unparseable content is handed back verbatim instead of exploding.
+        assert data["rezepte"][0]["rezept"] == "{not json"
+
+    def test_corrupt_preferences_fall_back_to_defaults(self, client, logged_in, db_session):
+        user = db_session.execute(select(User)).scalar_one()
+        user.preferences_json = "definitely not json"
+        db_session.commit()
+
+        assert client.get("/api/v1/me").status_code == 200
+        data = _export(client).json()
+        assert data["einstellungen"]["standard_personen"] >= 1
+
+    def test_login_methods_are_listed(self, client, logged_in, db_session):
+        """A Google account says google; adding a password adds passwort."""
+        data = _export(client).json()
+        assert data["konto"]["anmeldung"] == ["google"]
+
+        user = db_session.execute(select(User)).scalar_one()
+        user.password_hash = "scrypt$1$1$1$x$y"
+        db_session.commit()
+        assert _export(client).json()["konto"]["anmeldung"] == ["google", "passwort"]
+
+    def test_empty_account_exports_cleanly(self, client, logged_in):
+        data = _export(client).json()
+        assert data["rezepte"] == []
+        assert data["einkaufsliste"] == []
+        assert data["wochenplan"] == []
+        assert data["nutzung"] == []

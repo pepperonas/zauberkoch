@@ -71,6 +71,32 @@ describe('generation store', () => {
     expect(getGeneration().remaining).toBe(12);
   });
 
+  it('carries the BYOK "unlimited" flag instead of a countdown', () => {
+    const { captured, runner } = makeRunner();
+    startGeneration(runner, 'kochen');
+    captured.cb!.onSaved!({ recipe_id: 9, cached: false, remaining: null, unlimited: true });
+    expect(getGeneration().unlimited).toBe(true);
+    expect(getGeneration().remaining).toBeNull();
+  });
+
+  it('defaults to limited when the server omits the flag', () => {
+    const { captured, runner } = makeRunner();
+    startGeneration(runner, 'kochen');
+    captured.cb!.onSaved!({ recipe_id: 9, cached: false, remaining: 3 });
+    expect(getGeneration().unlimited).toBe(false);
+  });
+
+  it('keeps the budget state across a cancel', () => {
+    // Cancel resets the stream, not what we know about today's budget —
+    // otherwise the counter would blink back to nothing on every abort.
+    const { captured, runner } = makeRunner();
+    startGeneration(runner, 'kochen');
+    captured.cb!.onSaved!({ recipe_id: 9, cached: false, remaining: null, unlimited: true });
+    cancelGeneration();
+    expect(getGeneration().phase).toBe('idle');
+    expect(getGeneration().unlimited).toBe(true);
+  });
+
   it('marks the result as seen', () => {
     const { captured, runner } = makeRunner();
     startGeneration(runner, 'cocktail');

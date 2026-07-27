@@ -200,3 +200,43 @@ class TestUnlimitedGeneration:
         ).scalars().all()[-1]
         assert row.byok is True
         assert generation_cost(row) == 0.0, "user-funded tokens must not show up as our cost"
+
+
+class TestKeyForGuards:
+    """`key_for` is the single predicate for "unlimited" — it has to answer
+    safely for every shape of user, or a limit check somewhere throws."""
+
+    def test_none_user(self):
+        assert byok.key_for(None) is None
+
+    def test_user_without_a_key(self, client, logged_in, db_session):
+        user = db_session.execute(select(User)).scalar_one()
+        assert byok.key_for(user) is None
+
+    def test_unreadable_ciphertext_counts_as_no_key(self, client, logged_in, db_session):
+        """Secret rotated or row tampered with: fall back to our key and our
+        limits rather than failing to cook."""
+        user = db_session.execute(select(User)).scalar_one()
+        user.anthropic_key_enc = "v1$not$decryptable"
+        db_session.commit()
+        assert byok.key_for(user) is None
+
+    def test_status_of_an_unreadable_key_is_inactive(self, client, logged_in, db_session):
+        user = db_session.execute(select(User)).scalar_one()
+        user.anthropic_key_enc = "v1$not$decryptable"
+        user.anthropic_key_hint = "AAAA"
+        db_session.commit()
+        status = byok.status_for(user)
+        assert status["active"] is False
+        assert status["hint"] == "", "a hint for a key we cannot use would be a lie"
+
+    def test_an_unusable_stored_key_still_consumes_the_daily_limit(
+        self, client, logged_in, mock_ai, db_session
+    ):
+        """The fallback must be complete: no key means our key AND our budget."""
+        user = db_session.execute(select(User)).scalar_one()
+        user.anthropic_key_enc = "v1$not$decryptable"
+        db_session.commit()
+        saved = generate(client, logged_in)[-1][1]
+        assert saved["unlimited"] is False
+        assert mock_ai["last_api_key"] is None

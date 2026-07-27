@@ -38,16 +38,22 @@ Pick a cuisine, flavors and constraints — the app streams a cookbook-quality r
 - **Shared-element navigation** — dish graphic and title morph into the detail view via **Material Container Transform** (native View Transitions API) — from the recipe list, the weekly planner and the shopping list; tabs fade through, back reverses the morph — **including the browser back button on mobile** (react-router data-router view transitions), all GPU-composited (`transform`/`opacity` only)
 - **CRT power-off logout** — signing out collapses the screen like an old tube TV (scanline → dot → afterglow), theme-aware and `prefers-reduced-motion`-safe
 - **Explanatory hover tooltips** on the action buttons (desktop, `prefers-reduced-motion`-safe)
+- **Bring your own key** — optionally store your own Anthropic API key and generate without any daily cap; the key is stored AES-256-GCM encrypted, never displayed and never returned to the browser (only its last four characters)
+- **Data export & account deletion in-app** — access and portability as one JSON file, deletion in one click (GDPR Art. 15/17/20, no email request needed)
+- **Print view** — a recipe as a kitchen sheet or PDF, black on white, without the app chrome; a written note comes along, an empty one does not
 - **Admin panel** — usage/cost dashboard (generations, tokens, cache rate, feedback per prompt version) + allowlist management, gated via `ZK_ADMIN_EMAILS`
 - **PWA** — installable, favorites readable offline, unobtrusive offline indicator instead of error pages
+- **Two ways in** — Google OAuth (PKCE, server-side) **and** email/password (scrypt, double opt-in, password reset); httpOnly sessions, CSRF protection, per-user and global daily limits
 
 ## Tests
 
-205 automated tests (127 backend pytest — 95 % statement coverage as of 2026-07-19 — plus 78 frontend Vitest; unit coverage deliberately targets the logic layer at ~55–60 %, project-wide 20 % since the React UI is E2E territory) run on every push via [GitHub Actions](.github/workflows/ci.yml); a local Playwright smoke covers the E2E flow. No test ever calls the real Anthropic API.
+347 automated tests run on every push via [GitHub Actions](.github/workflows/ci.yml): 232 backend (pytest, 94 % statement coverage as of 2026-07-27) and 115 frontend (Vitest). Unit coverage deliberately targets the logic layer; project-wide it sits at 21 % because the React surface is E2E territory — 8 Playwright tests cover login → generation → favorite, data export, account deletion, the BYOK dialog and the print view locally.
+
+The security-critical parts are asserted twice over: account deletion checks *every* affected table individually instead of trusting `ON DELETE CASCADE` (SQLite only enforces foreign keys while `PRAGMA foreign_keys=ON` is set), and the BYOK tests explicitly assert that neither `/me` nor the data export ever contains a key in plaintext. No test ever calls the real Anthropic API.
 
 ## Stack
 
-Python 3.12 · FastAPI · SQLite · SQLAlchemy 2 · Alembic — Anthropic API (streaming, structured outputs, prompt caching) — React 19 · Vite · TypeScript strict · TanStack Query · Motion — Google OAuth (PKCE, httpOnly sessions).
+Python 3.12 · FastAPI · SQLite · SQLAlchemy 2 · Alembic — Anthropic API (streaming, structured outputs, prompt caching) — React 19 · Vite · TypeScript strict · TanStack Query · Motion — Google OAuth (PKCE) and email/password, httpOnly sessions. Crypto: scrypt for passwords, HMAC for stateless tokens, AES-256-GCM for stored API keys.
 
 ## Quickstart
 
