@@ -98,6 +98,8 @@ export interface Me {
   name: string;
   picture_url: string;
   adult_confirmed: boolean;
+  /** True for accounts with a password — they re-authenticate before deletion. */
+  has_password: boolean;
   csrf_token: string;
   preferences: Preferences;
 }

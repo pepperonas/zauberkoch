@@ -53,7 +53,11 @@ def main() -> int:
             .group_by(Generation.user_id)
             .order_by(func.count().desc())
         ).all()
-        print("per user:        " + ", ".join(f"#{uid}: {n}" for uid, n in by_user))
+        # uid None = the account was deleted; the usage row stays detached.
+        print(
+            "per user:        "
+            + ", ".join(f"{'deleted' if uid is None else f'#{uid}'}: {n}" for uid, n in by_user)
+        )
 
         from app.models import Recipe
 

@@ -111,12 +111,28 @@ export function DatenschutzPage() {
       <h2>11. Deine Rechte</h2>
       <p>
         Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17),
-        Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Zur
-        Ausübung genügt eine formlose E-Mail an{' '}
-        <a href="mailto:martin.pfeffer@celox.io">martin.pfeffer@celox.io</a> — auf Wunsch löschen wir dein
-        Konto mitsamt aller Inhalte. Du hast außerdem ein Beschwerderecht bei einer
-        Datenschutz-Aufsichtsbehörde, z.&nbsp;B. der Berliner Beauftragten für Datenschutz und
-        Informationsfreiheit.
+        Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO).
+      </p>
+      <p>
+        <strong>Auskunft, Datenübertragbarkeit und Löschung kannst du direkt in der App ausüben</strong>{' '}
+        — ohne Anfrage und ohne Wartezeit: unter „Mein Profil“ findest du „Alle meine Daten
+        herunterladen“ (vollständiger Export als JSON-Datei, in einem gängigen maschinenlesbaren
+        Format) und „Konto löschen“.
+      </p>
+      <p>
+        Die Löschung erfolgt sofort und endgültig. Entfernt werden dein Konto, alle Rezepte samt
+        Notizen und Bewertungen, Favoriten, Einkaufsliste, Wochenplan, geteilte Links und deine
+        Sitzungen. Erhalten bleiben zwei Dinge ohne Bezug zu deiner Person: der anonyme
+        Nutzungszähler zur Kostenabrechnung (Zeitpunkt, Modus, Dauer — die Zuordnung zu deinem Konto
+        wird dabei gelöscht) und bereits erzeugte Rezepttexte in unserem technischen
+        Zwischenspeicher, der ausschließlich über einen Hashwert der Rezeptparameter angesprochen
+        wird und keine Nutzerkennung enthält.
+      </p>
+      <p>
+        Für die übrigen Rechte oder bei Fragen genügt eine formlose E-Mail an{' '}
+        <a href="mailto:martin.pfeffer@celox.io">martin.pfeffer@celox.io</a>. Du hast außerdem ein
+        Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde, z.&nbsp;B. der Berliner Beauftragten
+        für Datenschutz und Informationsfreiheit.
       </p>
 
       <h2>12. Änderungen</h2>

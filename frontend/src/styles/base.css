@@ -187,3 +187,96 @@ html.zk-route-vt .shell__header {
 
 /* No route VT (reduced-motion / no API) → these names never mount, and the
    provider skips startViewTransition entirely, so nothing here applies. */
+
+/* ---------------------------------------------------------------------------
+   Print: turn the recipe detail page into a kitchen sheet (and, via "save as
+   PDF", into a file). No dialog and no PDF library — the browser already has
+   both; this stylesheet just removes the app around the recipe.
+
+   Deliberately ink-frugal: dark theme tokens would flood a page with colour,
+   so print always renders black on white regardless of the active theme.
+--------------------------------------------------------------------------- */
+@media print {
+  /* Force the light palette for the printout. */
+  :root, :root[data-theme='dark'], :root[data-theme='light'] {
+    --c-surface: #fff;
+    --c-surface-container: #fff;
+    --c-surface-container-high: #fff;
+    --c-surface-container-highest: #fff;
+    --c-on-surface: #000;
+    --c-on-surface-variant: #333;
+    --c-outline: #999;
+    --c-outline-variant: #ccc;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Everything that is app, not recipe. */
+  .shell__header,
+  .shell__footer,
+  .nav,
+  .offline-bar,
+  .generation-bar,
+  .generation-pill,
+  .scrim,
+  .snackbar,
+  .tooltip,
+  .fab,
+  .btn,
+  .stepper,
+  .chips,
+  .detail__danger {
+    display: none !important;
+  }
+
+  /* App affordances inside the recipe: substitute buttons, the feedback bar,
+     and the note editor when it is still empty (:placeholder-shown) — an empty
+     box on paper is just wasted ink. A written note DOES print. */
+  .zutat__subst,
+  .detail__feedback {
+    display: none !important;
+  }
+  .detail__notiz:has(textarea:placeholder-shown) { display: none !important; }
+  .detail__notiz textarea {
+    border: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    resize: none !important;
+  }
+
+  .shell { padding-top: 0 !important; }
+  .shell__main { padding: 0 !important; max-width: none !important; }
+
+  /* Cards lose their surfaces — borders and shadows cost ink and say nothing
+     on paper. */
+  .card, .section, .hero {
+    box-shadow: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .hero__motif { width: 90px; height: 90px; }
+
+  /* Keep a step or an ingredient from being split across two sheets. */
+  li, .step, .stat { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+  .section { break-inside: auto; }
+
+  /* Sensible margins; the browser adds the header/footer with URL and date. */
+  @page { margin: 16mm 14mm; }
+
+  /* Links print as text — a URL in brackets after every word would be noise
+     on a recipe. */
+  a { text-decoration: none !important; color: inherit !important; }
+
+  /* No animation on paper. */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

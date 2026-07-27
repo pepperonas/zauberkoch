@@ -30,7 +30,7 @@ export function FeedbackBar({ recipeId, initial = null }: Props) {
   };
 
   return (
-    <div className="row" style={{ flexWrap: 'wrap', marginTop: 'var(--space-5)' }}>
+    <div className="row detail__feedback" style={{ flexWrap: 'wrap', marginTop: 'var(--space-5)' }}>
       <span className="muted">{t('feedback.question')}</span>
       <IconButton label={t('feedback.up')} active={value === 1} onClick={() => void send(1)}>
         <Icon name="thumbUp" size={20} />

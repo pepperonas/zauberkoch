@@ -146,6 +146,14 @@ export function RecipeDetailPage() {
             <Tooltip text={t('tips.copy')}>
               <Button variant="outlined" onClick={() => void copy()}><Icon name="copy" size={18} /> {t('recipe.copy')}</Button>
             </Tooltip>
+            <Tooltip text={t('tips.print')}>
+              {/* No dialog, no PDF library: the browser's own print sheet turns
+                  the page into paper or a PDF — the print stylesheet does the
+                  work (base.css, @media print). */}
+              <Button variant="outlined" onClick={() => window.print()}>
+                <Icon name="print" size={18} /> {t('recipe.print')}
+              </Button>
+            </Tooltip>
             {recipe.schritte.length > 0 && (
               <Tooltip text={t('tips.cook')}>
                 <Button onClick={() => setCookOpen(true)}><Icon name="chefhat" size={18} /> {t('recipe.cookMode')}</Button>
@@ -173,7 +181,7 @@ export function RecipeDetailPage() {
         }
       />
 
-      <section className="section">
+      <section className="section detail__notiz">
         <label className="muted" htmlFor="notiz" style={{ display: 'block', marginBottom: 'var(--space-2)' }}>
           <Icon name="note" size={15} /> {t('notes.label')}
         </label>

@@ -4,11 +4,12 @@
 import { useEffect, useState } from 'react';
 
 import { t } from '../i18n';
-import { api } from '../lib/api';
+import { api, ApiRequestError } from '../lib/api';
 import type { Preferences } from '../lib/types';
 import { useApp } from '../state/app';
 import { Icon } from './icons';
 import { Button, Chip, Switch } from './ui';
+import { Dialog } from './ui/Dialog';
 import { Sheet } from './ui/Sheet';
 import { ZutatInput } from './ui/ZutatInput';
 import { useSnackbar } from './ui/Snackbar';
@@ -26,6 +27,10 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const { show } = useSnackbar();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [input, setInput] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (open && me) setPrefs({ ...me.preferences });
@@ -49,6 +54,34 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
     refreshMe();
     onClose();
     show(t('profile.saved'));
+  };
+
+  const exportData = async () => {
+    try {
+      await api.exportData();
+      show(t('profile.exportDone'));
+    } catch {
+      show(t('profile.exportFailed'));
+    }
+  };
+
+  const destroy = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await api.deleteAccount(password);
+    } catch (e) {
+      const status = e instanceof ApiRequestError ? e.status : 0;
+      setError(status === 403 ? t('profile.deleteWrongPassword') : t('profile.deleteFailed'));
+      setBusy(false);
+      return;
+    }
+    setConfirmDelete(false);
+    onClose();
+    // Same exit as a logout: the tube powers off, then the shell's logout call
+    // runs into a dead session (harmless 401) and refreshes /me → landing.
+    if (onLogout) onLogout();
+    else refreshMe();
   };
 
   // On narrow screens the header logout is hidden — this is the fallback.
@@ -150,7 +183,53 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
 
         <Button onClick={() => void save()}>{t('common.save')}</Button>
         <Button variant="text" onClick={() => void logout()}><Icon name="power" size={18} /> {t('auth.logout')}</Button>
+
+        <div className="profile__data stack">
+          <span className="wiz__row-label">{t('profile.dataTitle')}</span>
+          <p className="muted profile__data-hint">{t('profile.exportHint')}</p>
+          <Button variant="text" onClick={() => void exportData()}>
+            <Icon name="download" size={18} /> {t('profile.exportAction')}
+          </Button>
+          <Button variant="text" className="profile__delete" onClick={() => setConfirmDelete(true)}>
+            <Icon name="trash" size={18} /> {t('profile.deleteAction')}
+          </Button>
+        </div>
       </div>
+
+      <Dialog
+        open={confirmDelete}
+        onClose={() => !busy && setConfirmDelete(false)}
+        label={t('profile.deleteTitle')}
+      >
+        <div className="stack">
+          <h3>{t('profile.deleteTitle')}</h3>
+          <p className="muted">{t('profile.deleteBody')}</p>
+          <p className="profile__warn">{t('profile.deleteIrreversible')}</p>
+          <p className="muted">{t('profile.deleteExportFirst')}</p>
+          {me?.has_password && (
+            <label>
+              <span className="wiz__row-label">{t('profile.deletePasswordLabel')}</span>
+              <input
+                className="input"
+                style={{ marginTop: 'var(--space-2)' }}
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+          )}
+          {error && <p className="profile__warn">{error}</p>}
+          <div className="row" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <Button variant="text" onClick={() => setConfirmDelete(false)} disabled={busy}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="danger" onClick={() => void destroy()} disabled={busy}>
+              <Icon name="trash" size={18} /> {busy ? t('common.loading') : t('profile.deleteConfirm')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </Sheet>
   );
 }

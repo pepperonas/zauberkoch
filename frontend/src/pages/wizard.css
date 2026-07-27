@@ -15,3 +15,10 @@
 .limitbox { text-align: center; padding: var(--space-10) var(--space-5); }
 .limitbox__emoji { font-size: 3.5rem; margin-bottom: var(--space-4); }
 .plan__today { border-color: var(--c-primary); }
+
+/* Profile: data & account section — visually set apart from the settings
+   above it, so a destructive action can't be hit while skimming. */
+.profile__data { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--c-outline-variant); }
+.profile__data-hint { font: var(--type-label-sm); margin: calc(var(--space-1) * -1) 0 0; }
+.profile__delete { color: var(--c-error); align-self: flex-start; }
+.profile__warn { color: var(--c-error); font: var(--type-body); margin: 0; }

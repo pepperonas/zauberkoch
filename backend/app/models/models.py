@@ -128,7 +128,12 @@ class Generation(Base):
     __tablename__ = "generations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # SET NULL, not CASCADE: deleting an account removes the person, not the
+    # books. Detached rows keep the cost/usage history intact (no longer
+    # personal data — just "a generation happened, it cost this much").
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     mode: Mapped[str] = mapped_column(String(16))
     prompt_version: Mapped[str] = mapped_column(String(32))
     model: Mapped[str] = mapped_column(String(64))

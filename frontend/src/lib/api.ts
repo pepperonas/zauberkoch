@@ -64,6 +64,23 @@ export const api = {
   resetPassword: (token: string, password: string, passwordConfirm: string) =>
     post<Ok>('/auth/reset', { token, password, password_confirm: passwordConfirm }),
   confirmAdult: () => request<{ adult_confirmed: boolean }>('/me/confirm-adult', { method: 'POST' }),
+  /** Downloads the account export (Art. 15/20). Bypasses `request()` because
+   * the response is a file, not a typed JSON payload. */
+  exportData: async (): Promise<void> => {
+    const res = await fetch('/api/v1/me/export', { credentials: 'same-origin' });
+    if (!res.ok) throw new ApiRequestError(res.status, { code: 'export_failed', message: 'Export fehlgeschlagen' });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zauberkoch-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+  deleteAccount: (password?: string) =>
+    request<void>('/me', { method: 'DELETE', body: JSON.stringify({ confirm: true, password: password || null }) }),
   putPreferences: (prefs: Preferences) =>
     request<{ preferences: Preferences }>('/me/preferences', { method: 'PUT', body: JSON.stringify(prefs) }),
   setNotiz: (recipeId: number, notiz: string) =>

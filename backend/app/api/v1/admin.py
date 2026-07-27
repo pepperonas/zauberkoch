@@ -96,8 +96,14 @@ def stats(
         "cost_usd": round(cost, 2),
         "median_duration_ms": durations[len(durations) // 2] if durations else 0,
         "daily": daily,
+        # uid is NULL for generations whose account was deleted — the usage
+        # stays in the books, the person does not (see migration c3d4e5f6a7b8).
         "per_user": [
-            {"email": users.get(uid, f"#{uid}"), "count": n, "series": user_series[uid]}
+            {
+                "email": "gelöschtes Konto" if uid is None else users.get(uid, f"#{uid}"),
+                "count": n,
+                "series": user_series[uid],
+            }
             for uid, n in per_user_rows
         ],
         "feedback": feedback,
