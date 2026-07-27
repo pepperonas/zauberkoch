@@ -240,3 +240,108 @@ class TestKeyForGuards:
         saved = generate(client, logged_in)[-1][1]
         assert saved["unlimited"] is False
         assert mock_ai["last_api_key"] is None
+
+
+class TestClientLifecycle:
+    """A per-request `AsyncAnthropic` owns an httpx connection pool. Leaking one
+    per BYOK generation exhausts file descriptors in a process that runs for
+    weeks — the kind of bug that only shows up in production, months in."""
+
+    def test_byok_client_is_closed_after_use(self):
+        import asyncio
+
+        from app.services import ai
+
+        async def run():
+            async with ai.client_for("sk-ant-throwaway") as client:
+                assert not client._client.is_closed
+                return client
+
+        client = asyncio.run(run())
+        assert client._client.is_closed, "BYOK client was left open"
+
+    def test_shared_client_survives_the_context(self):
+        """Closing the project client would break every later call."""
+        import asyncio
+
+        from app.services import ai
+
+        async def run():
+            async with ai.client_for(None) as client:
+                return client
+
+        client = asyncio.run(run())
+        assert client is ai.get_client()
+        assert not client._client.is_closed
+
+    def test_client_is_closed_even_when_the_call_raises(self):
+        import asyncio
+
+        from app.services import ai
+
+        captured = {}
+
+        async def run():
+            try:
+                async with ai.client_for("sk-ant-throwaway") as client:
+                    captured["client"] = client
+                    raise RuntimeError("stream died")
+            except RuntimeError:
+                pass
+
+        asyncio.run(run())
+        assert captured["client"]._client.is_closed
+
+    def test_no_call_site_bypasses_the_context_manager(self):
+        """Grep-as-a-test: a new `get_client(api_key)` outside `client_for`
+        would silently reintroduce the leak."""
+        import inspect
+
+        from app.services import ai
+
+        src = inspect.getsource(ai)
+        # The only mentions may be the definition, the docstring and client_for.
+        body = src.split("async def verify_key")[1]
+        assert "get_client(api_key)" not in body
+
+
+class TestKeyCheckIsNotAnOracle:
+    """Storing a key costs an Anthropic round trip. Unthrottled, that turns the
+    endpoint into a free "is this key valid?" service for stolen candidates —
+    run through our IP and our identity."""
+
+    def test_burst_is_capped_per_ip(self, client, logged_in, accept_keys):
+        from app.api.v1.me import KEY_CHECKS_PER_MINUTE
+
+        codes = [_set_key(client, logged_in).status_code for _ in range(KEY_CHECKS_PER_MINUTE + 2)]
+        assert 429 in codes, "no burst limit on the key check"
+        assert codes[0] == 200
+
+    def test_daily_budget_is_capped_per_account(self, client, logged_in, accept_keys, monkeypatch):
+        from app.api.v1 import me as me_module
+
+        monkeypatch.setattr(me_module, "KEY_CHECKS_PER_DAY", 2)
+        ratelimit_ip.reset()  # isolate from the burst limit
+        seen = []
+        for _ in range(4):
+            seen.append(_set_key(client, logged_in).status_code)
+            ratelimit_ip.reset()
+        assert seen[:2] == [200, 200]
+        assert seen[2] == 429
+
+    def test_a_malformed_key_does_not_spend_the_daily_budget(
+        self, client, logged_in, db_session, monkeypatch
+    ):
+        """Only checks that actually reach Anthropic count — a typo must not
+        lock the owner out of storing their real key."""
+        from sqlalchemy import select as _select
+
+        from app.models import RateLimit as _RateLimit
+
+        monkeypatch.setattr("app.api.v1.me.ai.verify_key", lambda _k: (_ for _ in ()).throw(AssertionError))
+        assert _set_key(client, logged_in, "not-a-key").status_code == 422
+        user_id = db_session.execute(_select(User)).scalar_one().id
+        rows = db_session.execute(
+            _select(_RateLimit).where(_RateLimit.scope == f"byokkey:{user_id}")
+        ).scalars().all()
+        assert rows == []

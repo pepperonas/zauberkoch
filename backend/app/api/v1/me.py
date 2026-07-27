@@ -29,8 +29,9 @@ from app.models import (
     User,
 )
 from app.schemas.recipe import Preferences
-from app.services import ai, byok
+from app.services import ai, byok, ratelimit
 from app.services.passwords import verify_password
+from app.services.ratelimit_ip import check_ip_limit
 
 router = APIRouter(prefix="/me")
 
@@ -93,9 +94,19 @@ class AnthropicKeyBody(BaseModel):
     key: str
 
 
+# Validation talks to Anthropic, so this endpoint must never become a free
+# "is this key valid?" oracle: without a limit an account could test stolen
+# key candidates through us, at our IP and under our identity. Two limits,
+# because they stop different things — the burst (per IP) and the grind
+# (per account, per day).
+KEY_CHECKS_PER_MINUTE = 5
+KEY_CHECKS_PER_DAY = 20
+
+
 @router.put("/anthropic-key", dependencies=[Depends(require_csrf)])
 async def set_anthropic_key(
     body: AnthropicKeyBody,
+    request: Request,
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ) -> dict:
@@ -105,12 +116,19 @@ async def set_anthropic_key(
     free of tokens, so checking costs its owner nothing. Rejecting a broken key
     here is what keeps the failure out of the middle of a generation.
     """
+    check_ip_limit(request, scope="byokkey", limit=KEY_CHECKS_PER_MINUTE, window_s=60)
     key = body.key.strip()
     if not byok.looks_like_key(key):
         raise HTTPException(
             status_code=422,
             detail="Das sieht nicht nach einem Anthropic-Schlüssel aus (beginnt mit „sk-ant-“).",
         )
+    ratelimit.consume_scoped(
+        db,
+        scope=f"byokkey:{user.id}",
+        limit=KEY_CHECKS_PER_DAY,
+        message="Zu viele Schlüssel-Prüfungen heute. Bitte morgen erneut versuchen.",
+    )
     if not await ai.verify_key(key):
         raise HTTPException(
             status_code=422,

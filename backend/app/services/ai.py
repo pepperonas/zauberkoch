@@ -12,7 +12,8 @@
 
 import logging
 import time
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 
 from anthropic import AsyncAnthropic
 
@@ -33,6 +34,9 @@ def get_client(api_key: str | None = None) -> AsyncAnthropic:
     BYOK clients are deliberately NOT cached: a per-key client pool would keep
     other people's credentials alive in memory for as long as the process runs.
     One extra TLS handshake per generation is a fair price.
+
+    A throwaway client owns an httpx connection pool and MUST be closed — use
+    `client_for()` rather than calling this directly with a key.
     """
     if api_key:
         return AsyncAnthropic(api_key=api_key)
@@ -40,6 +44,26 @@ def get_client(api_key: str | None = None) -> AsyncAnthropic:
     if _client is None:
         _client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
     return _client
+
+
+@asynccontextmanager
+async def client_for(api_key: str | None) -> AsyncIterator[AsyncAnthropic]:
+    """The client to use for one call, closed afterwards if it was throwaway.
+
+    Every BYOK call has to go through here: a per-request `AsyncAnthropic` that
+    is never closed leaks its connection pool, and in a process that runs for
+    weeks that ends in exhausted file descriptors. The shared project client is
+    the opposite case — closing it would break every later call, so it is
+    yielded untouched.
+    """
+    if not api_key:
+        yield get_client()
+        return
+    client = AsyncAnthropic(api_key=api_key)
+    try:
+        yield client
+    finally:
+        await client.close()
 
 
 async def verify_key(api_key: str) -> bool:
@@ -63,7 +87,7 @@ async def generate_recipe_events(
     started = time.monotonic()
     usage_event: Event | None = None
     try:
-        async with get_client(api_key).messages.stream(
+        async with client_for(api_key) as client, client.messages.stream(
             model=settings.anthropic_model,
             max_tokens=settings.anthropic_max_tokens,
             thinking={"type": "disabled"},
@@ -126,7 +150,7 @@ async def adapt_recipe_events(
     clean = " ".join(anweisung.split())
     prompt = ADAPT_PROMPT.format(recipe=_json.dumps(recipe, ensure_ascii=False), anweisung=clean)
     try:
-        async with get_client(api_key).messages.stream(
+        async with client_for(api_key) as client, client.messages.stream(
             model=settings.anthropic_model,
             max_tokens=settings.anthropic_max_tokens,
             thinking={"type": "disabled"},
@@ -205,13 +229,14 @@ async def substitute_options(recipe: dict, zutat: str, api_key: str | None = Non
         "zutaten": [z.get("name") for z in recipe.get("zutaten", [])],
     }
     prompt = SUBST_PROMPT.format(recipe=_json.dumps(compact, ensure_ascii=False), zutat=" ".join(zutat.split())[:60])
-    message = await get_client(api_key).messages.create(
-        model=settings.anthropic_model,
-        max_tokens=400,
-        thinking={"type": "disabled"},
-        output_config={"format": {"type": "json_schema", "schema": _SUBST_SCHEMA}},
-        messages=[{"role": "user", "content": prompt}],
-    )
+    async with client_for(api_key) as client:
+        message = await client.messages.create(
+            model=settings.anthropic_model,
+            max_tokens=400,
+            thinking={"type": "disabled"},
+            output_config={"format": {"type": "json_schema", "schema": _SUBST_SCHEMA}},
+            messages=[{"role": "user", "content": prompt}],
+        )
     return _json.loads("".join(b.text for b in message.content if b.type == "text"))
 
 
@@ -235,21 +260,22 @@ async def fridge_scan(image_b64: str, media_type: str, api_key: str | None = Non
     import json as _json
 
     settings = get_settings()
-    message = await get_client(api_key).messages.create(
-        model=settings.anthropic_model,
-        max_tokens=500,
-        thinking={"type": "disabled"},
-        output_config={"format": {"type": "json_schema", "schema": _SCAN_SCHEMA}},
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
-                    {"type": "text", "text": SCAN_PROMPT},
-                ],
-            }
-        ],
-    )
+    async with client_for(api_key) as client:
+        message = await client.messages.create(
+            model=settings.anthropic_model,
+            max_tokens=500,
+            thinking={"type": "disabled"},
+            output_config={"format": {"type": "json_schema", "schema": _SCAN_SCHEMA}},
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
+                        {"type": "text", "text": SCAN_PROMPT},
+                    ],
+                }
+            ],
+        )
     data = _json.loads("".join(b.text for b in message.content if b.type == "text"))
     data["zutaten"] = [" ".join(z.split())[:40] for z in data.get("zutaten", []) if z.strip()][:20]
     return data
