@@ -1,16 +1,19 @@
-/** The colophon genie: hovering a card releases a swirling stream of dots from
- * its icon, which unfurls and settles into a figure behind the footer.
+/** The colophon genie: hovering a card releases a swirling column of dots from
+ * its icon, which climbs, unfurls and settles into a figure behind the footer.
  *
- * Two deliberate departures from the Octocat field on celox.io, which does the
- * same dot-silhouette trick:
+ * The dot-silhouette idea and the idle character come from the Octocat field on
+ * celox.io — breathing drift, a brightness wave travelling across the figure,
+ * and a cursor that shoves nearby dots aside while they flare up. Two things
+ * are deliberately different:
  *
  *  - **No Three.js.** A footer flourish must not cost 150 kB and a WebGL
- *    context. 2D canvas draws a few hundred quads per frame without noticing.
- *  - **Genie entrance instead of a settling cloud.** Particles do not fade in
- *    from a scattered shell; they leave the icon like smoke from a bottle,
- *    spiralling along the path to their target with the swirl widest in the
- *    middle of the flight. Leaving the card runs the same motion backwards, so
- *    the figure is drawn back into the icon.
+ *    context. 2D canvas draws a few thousand quads per frame without noticing.
+ *  - **A genie leaving a bottle, not a cloud settling.** Every particle flies a
+ *    quadratic Bézier whose control point sits high above the icon and is
+ *    almost the SAME for all of them: they leave as one narrow column and only
+ *    fan out into the figure near the end. That shared control point is the
+ *    whole trick — a straight origin→target path with a bit of swirl (the first
+ *    attempt) just looks like dots appearing.
  *
  * Runs only where hover exists and motion is welcome, and the rAF loop stops
  * dead once the field is empty — an idle page must not paint.
@@ -20,38 +23,66 @@ import { useEffect, useRef } from 'react';
 
 import { fieldPoints, SHAPE_FILL, type GenieShapeKey } from './genieShapes';
 
-// -- motion constants (a particle system has physics, not tokens) ------------
-/** Exponential approach to the target progress: smaller = snappier. Interrupts
- *  gracefully, which a fixed tween would not — hover in, out, in again. */
-const TAU_IN_MS = 260;
-const TAU_OUT_MS = 170;
-/** Latest a particle may start, as a fraction of progress — this stagger is
- *  what turns a moving cloud into a stream. */
-const MAX_DELAY = 0.55;
-/** Sideways swirl of the plume, in px, widest at half flight. */
-const SWIRL_MIN = 14;
-const SWIRL_MAX = 46;
-/** Turns around the flight axis on the way out. */
-const TURNS_MIN = 0.5;
-const TURNS_MAX = 1.5;
-/** How far the plume bows upward before settling (px). Smoke rises. */
-const RISE = 26;
-/** Idle breathing once assembled. */
-const BREATH_PX = 1.1;
-const BREATH_SPEED = 0.0011;
-const DOT_PX = 1.7;
+// -- entrance ---------------------------------------------------------------
+/** Time to full assembly. Long enough that the climb is a movement you watch,
+ *  not a state you find already finished — the first version took ~600 ms and
+ *  read as "the dots are simply there". */
+const DUR_IN_MS = 1150;
+const DUR_OUT_MS = 520;
+/** How far above the icon the column climbs before unfurling (px). */
+const RISE = 165;
+/** Spread of the shared control point, so the column is a plume, not a wire. */
+const CTRL_JITTER_X = 22;
+const CTRL_JITTER_Y = 34;
+/** Latest a particle may start, as a fraction of progress — the stagger is what
+ *  turns a moving cloud into a stream. */
+const MAX_DELAY = 0.5;
+/** Sideways swirl around the flight path, widest at half flight. */
+const SWIRL_MIN = 10;
+const SWIRL_MAX = 34;
+const TURNS_MIN = 0.4;
+const TURNS_MAX = 1.3;
+
+// -- idle (ported from the celox octocat field) -----------------------------
+/** Breathing drift, px. */
+const DRIFT_MIN = 1.2;
+const DRIFT_MAX = 3.4;
+const DRIFT_SPEED_X = 0.0008;
+const DRIFT_SPEED_Y = 0.0007;
+/** Brightness wave sweeping across the figure — it reads the particle's own x,
+ *  so the shimmer travels instead of twinkling at random. */
+const WAVE_SPEED = 0.0009;
+const WAVE_ACROSS = 0.012;
+const WAVE_DEPTH = 0.28;
+/** Slow sway of the whole figure. */
+const SWAY_PX = 3.5;
+const SWAY_SPEED = 0.00025;
+/** Cursor repel: dots are shoved aside and flare up while displaced. */
+const REPEL_R = 105;
+const REPEL_STRENGTH = 34;
+/** Per-frame easing of the displacement — also how fast it heals. */
+const REPEL_EASE = 0.16;
+const FLARE_MAX = 1.3;
+
+const DOT_PX = 1.75;
 const FIELD_ALPHA = 0.62;
-/** Progress below which the field counts as gone and the loop may stop. */
-const DONE_EPS = 0.004;
 
 interface Particle {
   tx: number;
   ty: number;
+  cx: number;
+  cy: number;
   delay: number;
   swirl: number;
   turns: number;
   phase: number;
+  drift: number;
+  /** Static brightness spread, so the field has depth at rest. */
+  bright: number;
   accent: boolean;
+  /** Live repel displacement, eased toward the desired push and back to 0. */
+  ox: number;
+  oy: number;
 }
 
 interface Props {
@@ -88,6 +119,8 @@ export function GenieField({ shape, origin }: Props) {
     particles: [] as Particle[],
     origin: { x: 0, y: 0 },
     box: { w: 0, h: 0 },
+    /** Pointer in canvas coordinates, or null when it is elsewhere. */
+    pointer: null as { x: number; y: number } | null,
     progress: 0,
     target: 0,
     ink: '#000',
@@ -117,6 +150,28 @@ export function GenieField({ shape, origin }: Props) {
     return () => ro.disconnect();
   }, []);
 
+  // The canvas is pointer-events:none, so the pointer is tracked on the window
+  // and mapped into the box — same approach as the celox field.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onMove = (e: PointerEvent) => {
+      const r = canvas.getBoundingClientRect();
+      const inside =
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      state.current.pointer = inside ? { x: e.clientX - r.left, y: e.clientY - r.top } : null;
+    };
+    const onLeave = () => {
+      state.current.pointer = null;
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('blur', onLeave);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('blur', onLeave);
+    };
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -127,26 +182,41 @@ export function GenieField({ shape, origin }: Props) {
     if (shape && origin) {
       const { w, h } = s.box;
       const span = Math.min(w, h) * SHAPE_FILL[shape];
-      const cx = w / 2;
+      const fx = w / 2;
       // Centred on the card block, not on the canvas: the field reaches far
       // above the cards so the plume has somewhere to rise from. The star row
       // is the exception — flat and wide, it reads far better in the open
       // space below the cards than hidden behind their text.
-      const cy = h * (shape === 'review' ? 0.64 : 0.5);
+      const fy = h * (shape === 'review' ? 0.64 : 0.5);
       const share = ACCENT_SHARE[shape];
-      s.particles = fieldPoints(shape).map((p) => ({
-        tx: cx + p.x * span,
-        ty: cy + p.y * span,
-        delay: Math.random() * MAX_DELAY,
-        swirl: SWIRL_MIN + Math.random() * (SWIRL_MAX - SWIRL_MIN),
-        turns: TURNS_MIN + Math.random() * (TURNS_MAX - TURNS_MIN),
-        phase: Math.random() * Math.PI * 2,
-        accent: Math.random() < share,
-      }));
+      const rect = canvas.getBoundingClientRect();
       // The emitter arrives in viewport coordinates — only the canvas knows
       // where its own box sits.
-      const rect = canvas.getBoundingClientRect();
-      s.origin = { x: origin.x - rect.left, y: origin.y - rect.top };
+      const ox = origin.x - rect.left;
+      const oy = origin.y - rect.top;
+
+      s.particles = fieldPoints(shape).map((p) => {
+        const tx = fx + p.x * span;
+        const ty = fy + p.y * span;
+        return {
+          tx,
+          ty,
+          // Nearly shared control point high above the icon: this is what makes
+          // them leave as one column instead of scattering straight to target.
+          cx: ox + (tx - ox) * 0.18 + (Math.random() - 0.5) * CTRL_JITTER_X,
+          cy: oy - RISE + (Math.random() - 0.5) * CTRL_JITTER_Y,
+          delay: Math.random() * MAX_DELAY,
+          swirl: SWIRL_MIN + Math.random() * (SWIRL_MAX - SWIRL_MIN),
+          turns: TURNS_MIN + Math.random() * (TURNS_MAX - TURNS_MIN),
+          phase: Math.random() * Math.PI * 2,
+          drift: DRIFT_MIN + Math.random() * (DRIFT_MAX - DRIFT_MIN),
+          bright: 0.5 + Math.random() * 0.5,
+          accent: Math.random() < share,
+          ox: 0,
+          oy: 0,
+        };
+      });
+      s.origin = { x: ox, y: oy };
       s.ink = readColor('--c-on-surface', '#1a1c19');
       s.accent = readColor(ACCENT_VAR[shape], s.ink);
       s.target = 1;
@@ -161,48 +231,89 @@ export function GenieField({ shape, origin }: Props) {
       const dt = Math.min(now - s.last, 64);
       s.last = now;
 
-      const tau = s.target > s.progress ? TAU_IN_MS : TAU_OUT_MS;
-      s.progress += (s.target - s.progress) * (1 - Math.exp(-dt / tau));
-      if (Math.abs(s.target - s.progress) < DONE_EPS) s.progress = s.target;
+      // Linear in time so the climb has a readable duration; the easing that
+      // matters is per particle (smoothstep: soft launch, soft arrival).
+      const step = dt / (s.target ? DUR_IN_MS : DUR_OUT_MS);
+      s.progress = Math.max(0, Math.min(1, s.progress + (s.target ? step : -step)));
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, s.box.w, s.box.h);
 
-      if (s.progress <= DONE_EPS && s.target === 0) {
+      if (s.progress <= 0 && s.target === 0) {
         s.raf = 0;
-        s.progress = 0;
         s.particles = [];
         return; // idle: stop painting entirely
       }
 
-      ctx.globalAlpha = FIELD_ALPHA * s.progress;
+      const sway = Math.sin(now * SWAY_SPEED) * SWAY_PX;
+      const ptr = s.pointer;
+
       for (const pass of [false, true]) {
         ctx.fillStyle = pass ? s.accent : s.ink;
         for (const p of s.particles) {
           if (p.accent !== pass) continue;
           const u = (s.progress - p.delay) / (1 - p.delay);
           if (u <= 0) continue; // still in the bottle
-          const e = u >= 1 ? 1 : 1 - (1 - u) * (1 - u) * (1 - u); // easeOutCubic
+          const e = u >= 1 ? 1 : u * u * (3 - 2 * u); // smoothstep
 
-          const dx = p.tx - s.origin.x;
-          const dy = p.ty - s.origin.y;
-          const len = Math.hypot(dx, dy) || 1;
-          // Perpendicular to the flight axis — the plume swirls around it.
-          const nx = -dy / len;
-          const ny = dx / len;
-          const bulge = Math.sin(Math.PI * Math.min(e, 1));
-          const angle = p.phase + p.turns * Math.PI * 2 * e;
-          const swing = Math.cos(angle) * p.swirl * bulge;
+          let x: number;
+          let y: number;
+          let size: number;
+          let alpha: number;
 
-          const breath =
-            e >= 1 ? Math.sin(now * BREATH_SPEED + p.phase) * BREATH_PX : 0;
-          const x = s.origin.x + dx * e + nx * swing + breath;
-          const y = s.origin.y + dy * e + ny * swing - RISE * bulge + breath;
+          if (e >= 1) {
+            // --- settled: breathe, shimmer, and get out of the cursor's way --
+            let pushX = 0;
+            let pushY = 0;
+            if (ptr) {
+              const rx = p.tx - ptr.x;
+              const ry = p.ty - ptr.y;
+              const r2 = rx * rx + ry * ry;
+              if (r2 < REPEL_R * REPEL_R) {
+                const rd = Math.sqrt(r2) || 0.0001;
+                const f = 1 - rd / REPEL_R;
+                const push = f * f * REPEL_STRENGTH;
+                pushX = (rx / rd) * push;
+                pushY = (ry / rd) * push;
+              }
+            }
+            p.ox += (pushX - p.ox) * REPEL_EASE;
+            p.oy += (pushY - p.oy) * REPEL_EASE;
 
-          // Dots on the near side of the swirl read larger — the cheap trick
-          // that makes a flat canvas look like a rotating column.
-          const size = DOT_PX * (0.72 + 0.5 * (0.5 + 0.5 * Math.sin(angle)));
+            const bx = Math.sin(now * DRIFT_SPEED_X + p.phase) * p.drift;
+            const by = Math.cos(now * DRIFT_SPEED_Y + p.phase * 1.3) * p.drift;
+            x = p.tx + bx + p.ox + sway;
+            y = p.ty + by + p.oy;
+
+            // Brightness wave travelling across the figure, plus a flare on the
+            // dots the cursor has just shoved: a glowing wake follows it.
+            const wave =
+              1 - WAVE_DEPTH + WAVE_DEPTH * Math.sin(now * WAVE_SPEED + p.tx * WAVE_ACROSS + p.phase);
+            const disp = Math.abs(p.ox) + Math.abs(p.oy);
+            alpha = p.bright * wave * (1 + Math.min(FLARE_MAX, disp * 0.05));
+            size = DOT_PX * (0.85 + 0.35 * wave);
+          } else {
+            // --- in flight: one column out of the bottle, then unfurling -----
+            const mt = 1 - e;
+            const px = mt * mt * s.origin.x + 2 * mt * e * p.cx + e * e * p.tx;
+            const py = mt * mt * s.origin.y + 2 * mt * e * p.cy + e * e * p.ty;
+            // Swirl perpendicular to the path's tangent.
+            const dxT = 2 * mt * (p.cx - s.origin.x) + 2 * e * (p.tx - p.cx);
+            const dyT = 2 * mt * (p.cy - s.origin.y) + 2 * e * (p.ty - p.cy);
+            const len = Math.hypot(dxT, dyT) || 1;
+            const bulge = Math.sin(Math.PI * e);
+            const angle = p.phase + p.turns * Math.PI * 2 * e;
+            const swing = Math.cos(angle) * p.swirl * bulge;
+            x = px + (-dyT / len) * swing;
+            y = py + (dxT / len) * swing;
+            // Fade in as they leave, and read the near side of the swirl as
+            // larger — the cheap trick that sells a rotating column.
+            alpha = p.bright * Math.min(1, u * 3);
+            size = DOT_PX * (0.6 + 0.4 * e) * (0.8 + 0.4 * (0.5 + 0.5 * Math.sin(angle)));
+          }
+
+          ctx.globalAlpha = FIELD_ALPHA * s.progress * alpha;
           ctx.fillRect(x, y, size, size);
         }
       }
