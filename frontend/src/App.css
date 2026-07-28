@@ -290,7 +290,7 @@
   position: absolute;
   /* Reaches well above the cards: the genie needs headroom, and a figure that
      only fits between the card rows gets its head cut off. */
-  top: -90px;
+  top: -230px;
   bottom: -140px;
   left: -60px;
   right: -60px;
@@ -299,8 +299,8 @@
   /* Soft at both ends — a hard edge where the canvas stops would give the
      overhang away, and the lower fade keeps the legal links out of the
      confetti (same trick as the celox octocat band). */
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 70%, transparent 98%);
-  mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 70%, transparent 98%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 76%, transparent 98%);
+  mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 76%, transparent 98%);
 }
 .colophon__genie canvas {
   position: absolute;

@@ -83,10 +83,36 @@ const DRIFT_MAX = 3.4;
 const DRIFT_SPEED_X = 0.0008;
 const DRIFT_SPEED_Y = 0.0007;
 /** Brightness wave sweeping across the field — it reads the particle's own x,
- *  so the shimmer travels instead of twinkling at random. */
+ *  so the shimmer travels instead of twinkling at random. Deeper on a figure:
+ *  that is where the eye is, and where the glitter should live. */
 const WAVE_SPEED = 0.0009;
 const WAVE_ACROSS = 0.012;
-const WAVE_DEPTH = 0.28;
+const WAVE_DEPTH_FIGURE = 0.42;
+const WAVE_DEPTH_DUST = 0.24;
+/** Sparkle: each dot glints briefly and rarely. `sin^8` is almost always ~0
+ *  with a short sharp peak, so the field twinkles like glitter instead of
+ *  pulsing as a whole — a plain sine would just make everything breathe. */
+const SPARK_SPEED_MIN = 0.0011;
+const SPARK_SPEED_MAX = 0.0034;
+/** How much brighter and fatter a dot gets at the peak of its glint. Size gain
+ *  stays small on purpose: a square grown to 4 px reads as a BLOCK, not as a
+ *  sparkle (it did). The glitter comes from the cross below instead. */
+const SPARK_GAIN = 1.9;
+const SPARK_SIZE = 0.45;
+/** Above this the glint is drawn as a four-armed flash rather than a square —
+ *  that shape is what the eye reads as "sparkle". Rare by construction (sin^8),
+ *  so only a handful of crosses exist in any one frame. */
+const SPARK_CROSS_MIN = 0.3;
+const SPARK_ARM = 3.0;
+const SPARK_ARM_THICK = 0.5;
+/** The dust glints too, but faintly — it is texture, not the subject. */
+const SPARK_DUST_SCALE = 0.3;
+/** Only a minority of dots sparkle at all. Without this the maths betrays the
+ *  eye: even sin^8 sits near its peak ~17 % of the time, so with every dot
+ *  eligible the cat turned into a field of plus signs. A tenth of them glinting
+ *  is glitter; all of them is a pattern. */
+const SPARKLER_SHARE_FIGURE = 0.12;
+const SPARKLER_SHARE_DUST = 0.06;
 /** Slow sway of the whole field. */
 const SWAY_PX = 3.5;
 const SWAY_SPEED = 0.00025;
@@ -127,6 +153,11 @@ interface Particle {
   /** Idle wander: amplitude in px and a speed multiplier. */
   drift: number;
   speed: number;
+  /** Glint timing — its own phase so sparkles never line up with the drift.
+   *  `sparkler` is false for most dots: only a minority twinkle. */
+  sparkler: boolean;
+  sparkSpeed: number;
+  sparkPhase: number;
   /** Static brightness spread, so the field has depth at rest. */
   bright: number;
   /** Colour and dimness before/after the current transition (crossfaded). */
@@ -309,6 +340,7 @@ export function GenieField({ shape, origin }: Props) {
           let y: number;
           let size: number;
           let alpha: number;
+          let spark = 0;
 
           if (u >= 1 && !p.dying) {
             // --- at rest: wander, shimmer, and get out of the cursor's way ---
@@ -341,11 +373,21 @@ export function GenieField({ shape, origin }: Props) {
 
             // Brightness wave travelling across the field, plus a flare on the
             // dots the cursor has just shoved: a glowing wake follows it.
+            const depth = p.dustB ? WAVE_DEPTH_DUST : WAVE_DEPTH_FIGURE;
             const wave =
-              1 - WAVE_DEPTH + WAVE_DEPTH * Math.sin(now * WAVE_SPEED + p.tx * WAVE_ACROSS + p.phase);
+              1 - depth + depth * Math.sin(now * WAVE_SPEED + p.tx * WAVE_ACROSS + p.phase);
+            // Glint: sin^8, so mostly dark with a brief sharp peak — and only
+            // for the dots that were picked as sparklers.
+            if (p.sparkler) {
+              const g = Math.max(0, Math.sin(now * p.sparkSpeed + p.sparkPhase));
+              const g2 = g * g;
+              const g4 = g2 * g2;
+              spark = g4 * g4 * (p.dustB ? SPARK_DUST_SCALE : 1);
+            }
             const disp = Math.abs(p.ox) + Math.abs(p.oy);
-            alpha = p.bright * wave * (1 + Math.min(FLARE_MAX, disp * 0.05));
-            size = DOT_PX * (0.85 + 0.35 * wave);
+            alpha =
+              p.bright * wave * (1 + spark * SPARK_GAIN) * (1 + Math.min(FLARE_MAX, disp * 0.05));
+            size = DOT_PX * (0.85 + 0.35 * wave) * (1 + spark * SPARK_SIZE);
           } else {
             // --- in flight along this leg's curve ---------------------------
             const e = u <= 0 ? 0 : smoothstep(u);
@@ -371,8 +413,18 @@ export function GenieField({ shape, origin }: Props) {
 
           p.px = x;
           p.py = y;
-          ctx.globalAlpha = FIELD_ALPHA * weight * alpha * dim;
-          ctx.fillRect(x, y, size, size);
+          ctx.globalAlpha = Math.min(1, FIELD_ALPHA * weight * alpha * dim);
+          if (spark > SPARK_CROSS_MIN) {
+            // A brief four-armed flash — drawn centred on the dot it replaces.
+            const arm = DOT_PX * (1.4 + spark * SPARK_ARM);
+            const thick = DOT_PX * SPARK_ARM_THICK;
+            const cxp = x + size / 2;
+            const cyp = y + size / 2;
+            ctx.fillRect(cxp - arm / 2, cyp - thick / 2, arm, thick);
+            ctx.fillRect(cxp - thick / 2, cyp - arm / 2, thick, arm);
+          } else {
+            ctx.fillRect(x, y, size, size);
+          }
         }
       }
       s.raf = requestAnimationFrame(draw);
@@ -428,11 +480,11 @@ export function GenieField({ shape, origin }: Props) {
 
     const span = Math.min(w, h) * (shape ? SHAPE_FILL[shape] : 1);
     const fx = w / 2;
-    // Centred on the card block, not on the canvas: the field reaches far above
-    // the cards so the plume has somewhere to rise from. The star row sits a
-    // little lower — it is flat and wide, and reads better clear of the card
-    // text — but only a little: hanging it under the colophon looked detached.
-    const fy = h * (shape === 'review' ? 0.575 : 0.5);
+    // Well above the card block: the figures belong in the open space over the
+    // colophon (behind the "Überrasch mich" button on the wizard), where they
+    // have room and nothing to hide behind. The star row stays a touch lower
+    // than the others — it is flat and wide, and needs less headroom.
+    const fy = h * (shape === 'review' ? 0.46 : 0.4);
     const share = shape ? ACCENT_SHARE[shape] : 0;
     const maxDelay = hadFigure && shape ? MAX_DELAY_MORPH : MAX_DELAY_IN;
 
@@ -506,6 +558,10 @@ export function GenieField({ shape, origin }: Props) {
         phase: old ? old.phase : Math.random() * Math.PI * 2,
         drift: dust ? rand(DUST_DRIFT_MIN, DUST_DRIFT_MAX) : rand(DRIFT_MIN, DRIFT_MAX),
         speed: dust ? rand(DUST_SPEED_MIN, DUST_SPEED_MAX) : 1,
+        sparkler:
+          Math.random() < (dust ? SPARKLER_SHARE_DUST : SPARKLER_SHARE_FIGURE),
+        sparkSpeed: old ? old.sparkSpeed : rand(SPARK_SPEED_MIN, SPARK_SPEED_MAX),
+        sparkPhase: old ? old.sparkPhase : Math.random() * Math.PI * 2,
         bright: old ? old.bright : 0.5 + Math.random() * 0.5,
         accentA: old ? old.accentB : false,
         accentB: point && shape ? Math.random() < share : (old?.accentB ?? false),
