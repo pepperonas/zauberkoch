@@ -36,7 +36,11 @@ function canHover(): boolean {
 
 export function Colophon() {
   const boxRef = useRef<HTMLDivElement>(null);
-  const [genie, setGenie] = useState<{ shape: GenieShapeKey; origin: { x: number; y: number } } | null>(null);
+  const [shape, setShape] = useState<GenieShapeKey | null>(null);
+  // The emitter OUTLIVES the hover: when the figure disperses, its surplus dots
+  // fly home into the icon they came from, so the field still needs to know
+  // which one that was.
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const [armed, setArmed] = useState(false);
 
   // Arm as soon as the footer comes into view, not on hover: the field is a
@@ -75,13 +79,14 @@ export function Colophon() {
     return () => io.disconnect();
   }, [arm, armed]);
 
-  const enter = useCallback((shape: GenieShapeKey) => (e: React.PointerEvent<HTMLAnchorElement>) => {
+  const enter = useCallback((next: GenieShapeKey) => (e: React.PointerEvent<HTMLAnchorElement>) => {
     if (!canHover()) return;
     const mark = e.currentTarget.querySelector('.colophon__mark')?.getBoundingClientRect();
     if (!mark) return;
     // Viewport coordinates — the field converts them against its own box,
     // which overhangs this element.
-    setGenie({ shape, origin: { x: mark.left + mark.width / 2, y: mark.top + mark.height / 2 } });
+    setOrigin({ x: mark.left + mark.width / 2, y: mark.top + mark.height / 2 });
+    setShape(next);
   }, []);
 
   // Leaving is handled by the CONTAINER, not by each card: card-level
@@ -89,7 +94,7 @@ export function Colophon() {
   // the following enter has to undo — the figure would flinch on every switch.
   // From here, moving between cards (or across the gap between them) is a plain
   // retarget, and only leaving the colophon puts the genie away.
-  const leave = useCallback(() => setGenie(null), []);
+  const leave = useCallback(() => setShape(null), []);
 
   const cards = [
     {
@@ -122,14 +127,14 @@ export function Colophon() {
 
   return (
     <div
-      className={`colophon${genie ? ' colophon--genie' : ''}`}
+      className={`colophon${shape ? ' colophon--genie' : ''}`}
       ref={boxRef}
       onPointerEnter={arm}
       onPointerLeave={leave}
     >
       {armed && (
         <Suspense fallback={null}>
-          <GenieField shape={genie?.shape ?? null} origin={genie?.origin ?? null} />
+          <GenieField shape={shape} origin={origin} />
         </Suspense>
       )}
 
