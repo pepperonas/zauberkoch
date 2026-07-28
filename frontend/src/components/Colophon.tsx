@@ -84,6 +84,11 @@ export function Colophon() {
     setGenie({ shape, origin: { x: mark.left + mark.width / 2, y: mark.top + mark.height / 2 } });
   }, []);
 
+  // Leaving is handled by the CONTAINER, not by each card: card-level
+  // pointerleave would fire on the way to a neighbour and start a retract that
+  // the following enter has to undo — the figure would flinch on every switch.
+  // From here, moving between cards (or across the gap between them) is a plain
+  // retarget, and only leaving the colophon puts the genie away.
   const leave = useCallback(() => setGenie(null), []);
 
   const cards = [
@@ -120,6 +125,7 @@ export function Colophon() {
       className={`colophon${genie ? ' colophon--genie' : ''}`}
       ref={boxRef}
       onPointerEnter={arm}
+      onPointerLeave={leave}
     >
       {armed && (
         <Suspense fallback={null}>
@@ -135,8 +141,6 @@ export function Colophon() {
           target="_blank"
           rel="noopener noreferrer"
           onPointerEnter={enter(c.key)}
-          onPointerLeave={leave}
-          onBlur={leave}
         >
           {c.mark}
           <span className="colophon__text">

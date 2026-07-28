@@ -181,6 +181,59 @@ test.describe('colophon genie', () => {
     await expect(page.locator('.colophon--genie')).toHaveCount(0);
   });
 
+  test('switching cards morphs instead of swapping', async ({ page }) => {
+    await footer(page);
+
+    // Alpha mass in the band where the star row lives. A hard swap would put
+    // the finished figure there within a frame; a morph needs the flight time,
+    // during which the dots are spread out and dim.
+    const band = () =>
+      page.evaluate(() => {
+        const c = document.querySelector('.colophon__genie canvas') as HTMLCanvasElement;
+        const ctx = c.getContext('2d')!;
+        const y0 = Math.floor(c.height * 0.55);
+        const d = ctx.getImageData(0, y0, c.width, Math.floor(c.height * 0.22)).data;
+        let sum = 0;
+        for (let i = 3; i < d.length; i += 4) sum += d[i];
+        return Math.round(sum / 1000);
+      });
+
+    await page.locator('.colophon__card').first().hover();
+    await page.waitForTimeout(1700);
+
+    await page.locator('.colophon__card--review').hover();
+    await page.waitForTimeout(150);
+    const early = await band();
+    await page.waitForTimeout(1300);
+    const settled = await band();
+
+    expect(settled).toBeGreaterThan(400); // the stars really did form
+    expect(early).toBeLessThan(settled * 0.45); // …and they were not simply there
+  });
+
+  test('rapid switching leaves the field intact', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await footer(page);
+    for (let i = 0; i < 6; i++) {
+      await page.locator('.colophon__card--donate').hover();
+      await page.waitForTimeout(70);
+      await page.locator('.colophon__card').first().hover();
+      await page.waitForTimeout(70);
+    }
+    await page.locator('.colophon__card--review').hover();
+    await page.waitForTimeout(1400);
+    const lit = await page.evaluate(() => {
+      const c = document.querySelector('.colophon__genie canvas') as HTMLCanvasElement;
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let on = 0;
+      for (let i = 3; i < d.length; i += 4) if (d[i] > 0) on++;
+      return on;
+    });
+    expect(lit).toBeGreaterThan(2000); // retargeting mid-flight did not strand them
+    expect(errors).toEqual([]);
+  });
+
   test('reduced motion mounts nothing at all', async ({ page }) => {
     // Not merely "does not animate": the canvas and its chunk stay away.
     await page.emulateMedia({ reducedMotion: 'reduce' });

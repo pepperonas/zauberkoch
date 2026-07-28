@@ -1,5 +1,7 @@
 /** The colophon genie: hovering a card releases a swirling column of dots from
  * its icon, which climbs, unfurls and settles into a figure behind the footer.
+ * Moving to a neighbouring card does NOT swap figures — the dots fly across and
+ * re-form into the new one.
  *
  * The dot-silhouette idea and the idle character come from the Octocat field on
  * celox.io — breathing drift, a brightness wave travelling across the figure,
@@ -15,6 +17,13 @@
  *    whole trick — a straight origin→target path with a bit of swirl (the first
  *    attempt) just looks like dots appearing.
  *
+ * ONE mechanism drives all three transitions, which is what makes switching
+ * cards mid-flight behave: every particle has a from-point, a control point and
+ * a target, and a single progress moves it along that curve. Appearing is "all
+ * particles come from the bottle", leaving is "all of them go back into it",
+ * and a figure change is "each keeps flying, to a new address". A particle that
+ * is retargeted mid-flight simply starts its next curve where it currently is.
+ *
  * Runs only where hover exists and motion is welcome, and the rAF loop stops
  * dead once the field is empty — an idle page must not paint.
  */
@@ -23,20 +32,27 @@ import { useEffect, useRef } from 'react';
 
 import { fieldPoints, SHAPE_FILL, type GenieShapeKey } from './genieShapes';
 
-// -- entrance ---------------------------------------------------------------
-/** Time to full assembly. Long enough that the climb is a movement you watch,
- *  not a state you find already finished — the first version took ~600 ms and
- *  read as "the dots are simply there". */
+// -- transitions ------------------------------------------------------------
+/** Rising out of the bottle. Long enough that the climb is a movement you
+ *  watch, not a state you find already finished. */
 const DUR_IN_MS = 1150;
+/** Figure → figure. Shorter than the entrance: the dots are already on stage,
+ *  and the eye is following a change, not waiting for an arrival. */
+const DUR_MORPH_MS = 780;
 const DUR_OUT_MS = 520;
 /** How far above the icon the column climbs before unfurling (px). */
 const RISE = 165;
 /** Spread of the shared control point, so the column is a plume, not a wire. */
 const CTRL_JITTER_X = 22;
 const CTRL_JITTER_Y = 34;
+/** Sideways bow and lift of a figure→figure flight. Signed per particle, so the
+ *  swarm swings both ways and crosses itself instead of sliding as a block. */
+const MORPH_ARC = 62;
+const MORPH_LIFT = 46;
 /** Latest a particle may start, as a fraction of progress — the stagger is what
- *  turns a moving cloud into a stream. */
-const MAX_DELAY = 0.5;
+ *  turns a moving cloud into a stream (and a morph into a ripple). */
+const MAX_DELAY_IN = 0.5;
+const MAX_DELAY_MORPH = 0.34;
 /** Sideways swirl around the flight path, widest at half flight. */
 const SWIRL_MIN = 10;
 const SWIRL_MAX = 34;
@@ -66,12 +82,21 @@ const FLARE_MAX = 1.3;
 
 const DOT_PX = 1.75;
 const FIELD_ALPHA = 0.62;
+/** Below this a layer is not worth a fillRect. */
+const ALPHA_EPS = 0.02;
 
 interface Particle {
-  tx: number;
-  ty: number;
+  /** Where this leg of the journey starts (the position it had when the last
+   *  transition began — that is what makes an interruption seamless). */
+  fx: number;
+  fy: number;
   cx: number;
   cy: number;
+  tx: number;
+  ty: number;
+  /** Live position, kept so a retarget can start from exactly here. */
+  px: number;
+  py: number;
   delay: number;
   swirl: number;
   turns: number;
@@ -79,7 +104,13 @@ interface Particle {
   drift: number;
   /** Static brightness spread, so the field has depth at rest. */
   bright: number;
-  accent: boolean;
+  /** Colour before and after the current transition (crossfaded between). */
+  accentA: boolean;
+  accentB: boolean;
+  /** Came out of the bottle in this transition — invisible until it launches. */
+  born: boolean;
+  /** Going back into the bottle; fades out on arrival and is then dropped. */
+  dying: boolean;
   /** Live repel displacement, eased toward the desired push and back to 0. */
   ox: number;
   oy: number;
@@ -111,20 +142,26 @@ function readColor(name: string, fallback: string): string {
   return v || fallback;
 }
 
+const smoothstep = (u: number) => u * u * (3 - 2 * u);
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
 export function GenieField({ shape, origin }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Everything the loop needs lives in refs: re-rendering React 60×/s to move
   // dots would be absurd.
   const state = useRef({
     particles: [] as Particle[],
-    origin: { x: 0, y: 0 },
     box: { w: 0, h: 0 },
     /** Pointer in canvas coordinates, or null when it is elsewhere. */
     pointer: null as { x: number; y: number } | null,
-    progress: 0,
-    target: 0,
+    /** Progress of the CURRENT transition, 0→1. */
+    morph: 1,
+    duration: DUR_IN_MS,
+    /** Is a figure currently addressed? Drives whether the loop may stop. */
+    live: false,
     ink: '#000',
-    accent: '#000',
+    accentA: '#000',
+    accentB: '#000',
     raf: 0,
     last: 0,
   });
@@ -179,90 +216,148 @@ export function GenieField({ shape, origin }: Props) {
     if (!ctx) return;
     const s = state.current;
 
-    if (shape && origin) {
-      const { w, h } = s.box;
-      const span = Math.min(w, h) * SHAPE_FILL[shape];
-      const fx = w / 2;
-      // Centred on the card block, not on the canvas: the field reaches far
-      // above the cards so the plume has somewhere to rise from. The star row
-      // is the exception — flat and wide, it reads far better in the open
-      // space below the cards than hidden behind their text.
-      const fy = h * (shape === 'review' ? 0.64 : 0.5);
-      const share = ACCENT_SHARE[shape];
-      const rect = canvas.getBoundingClientRect();
-      // The emitter arrives in viewport coordinates — only the canvas knows
-      // where its own box sits.
-      const ox = origin.x - rect.left;
-      const oy = origin.y - rect.top;
+    // ---- retarget: one code path for appear, morph and retract -------------
+    const rect = canvas.getBoundingClientRect();
+    const ox = origin ? origin.x - rect.left : 0;
+    const oy = origin ? origin.y - rect.top : 0;
+    const hadFigure = s.live;
 
-      s.particles = fieldPoints(shape).map((p) => {
-        const tx = fx + p.x * span;
-        const ty = fy + p.y * span;
-        return {
-          tx,
-          ty,
-          // Nearly shared control point high above the icon: this is what makes
-          // them leave as one column instead of scattering straight to target.
-          cx: ox + (tx - ox) * 0.18 + (Math.random() - 0.5) * CTRL_JITTER_X,
-          cy: oy - RISE + (Math.random() - 0.5) * CTRL_JITTER_Y,
-          delay: Math.random() * MAX_DELAY,
-          swirl: SWIRL_MIN + Math.random() * (SWIRL_MAX - SWIRL_MIN),
-          turns: TURNS_MIN + Math.random() * (TURNS_MAX - TURNS_MIN),
-          phase: Math.random() * Math.PI * 2,
-          drift: DRIFT_MIN + Math.random() * (DRIFT_MAX - DRIFT_MIN),
-          bright: 0.5 + Math.random() * 0.5,
-          accent: Math.random() < share,
-          ox: 0,
-          oy: 0,
-        };
+    // Whatever is on screen right now is where the next leg starts.
+    const carried = s.particles.filter((p) => !(p.dying && s.morph >= 1));
+    const targets = shape ? fieldPoints(shape) : [];
+
+    const { w, h } = s.box;
+    const span = Math.min(w, h) * (shape ? SHAPE_FILL[shape] : 1);
+    const fx = w / 2;
+    // Centred on the card block, not on the canvas: the field reaches far above
+    // the cards so the plume has somewhere to rise from. The star row is the
+    // exception — flat and wide, it reads far better in the open space below
+    // the cards than hidden behind their text.
+    const fy = h * (shape === 'review' ? 0.64 : 0.5);
+    const share = shape ? ACCENT_SHARE[shape] : 0;
+    const maxDelay = hadFigure && shape ? MAX_DELAY_MORPH : MAX_DELAY_IN;
+
+    s.duration = !shape ? DUR_OUT_MS : hadFigure ? DUR_MORPH_MS : DUR_IN_MS;
+    s.ink = readColor('--c-on-surface', '#1a1c19');
+    s.accentA = s.live ? s.accentB : s.ink;
+    s.accentB = shape ? readColor(ACCENT_VAR[shape], s.ink) : s.accentA;
+
+    const next: Particle[] = [];
+    const count = Math.max(carried.length, targets.length);
+    for (let i = 0; i < count; i++) {
+      const old = carried[i];
+      const point = targets[i];
+      const born = !old;
+      const dying = !point;
+
+      // Where it flies to: its place in the new figure, or back into the bottle.
+      const tx = point ? fx + point.x * span : ox;
+      const ty = point ? fy + point.y * span : oy;
+      // Where it starts: exactly where it is, or out of the bottle.
+      const sx = old ? old.px : ox;
+      const sy = old ? old.py : oy;
+
+      let cx: number;
+      let cy: number;
+      if (born || dying) {
+        // Nearly shared control point high above the icon: this is what makes
+        // them leave (or return) as one column instead of scattering.
+        const far = born ? tx : sx;
+        cx = ox + (far - ox) * 0.18 + (Math.random() - 0.5) * CTRL_JITTER_X;
+        cy = oy - RISE * (born ? 1 : 0.75) + (Math.random() - 0.5) * CTRL_JITTER_Y;
+      } else {
+        // Figure → figure: bow the path sideways and lift it a little, signed
+        // per particle so the swarm crosses itself instead of sliding across.
+        const dx = tx - sx;
+        const dy = ty - sy;
+        const len = Math.hypot(dx, dy) || 1;
+        const bow = rand(-MORPH_ARC, MORPH_ARC);
+        cx = (sx + tx) / 2 + (-dy / len) * bow;
+        cy = (sy + ty) / 2 + (dx / len) * bow - Math.random() * MORPH_LIFT;
+      }
+
+      next.push({
+        fx: sx,
+        fy: sy,
+        cx,
+        cy,
+        tx,
+        ty,
+        px: sx,
+        py: sy,
+        delay: Math.random() * maxDelay,
+        swirl: rand(SWIRL_MIN, SWIRL_MAX),
+        turns: rand(TURNS_MIN, TURNS_MAX),
+        phase: old ? old.phase : Math.random() * Math.PI * 2,
+        drift: old ? old.drift : rand(DRIFT_MIN, DRIFT_MAX),
+        bright: old ? old.bright : 0.5 + Math.random() * 0.5,
+        accentA: old ? old.accentB : false,
+        accentB: point ? Math.random() < share : (old?.accentB ?? false),
+        born,
+        dying,
+        ox: old ? old.ox : 0,
+        oy: old ? old.oy : 0,
       });
-      s.origin = { x: ox, y: oy };
-      s.ink = readColor('--c-on-surface', '#1a1c19');
-      s.accent = readColor(ACCENT_VAR[shape], s.ink);
-      s.target = 1;
-    } else {
-      s.target = 0;
     }
 
-    if (s.raf) return; // loop already running — it will pick up the new target
+    s.particles = next;
+    s.morph = 0;
+    s.live = Boolean(shape);
+
+    if (s.raf) return; // loop already running — it will pick up the new state
     s.last = performance.now();
 
     const frame = (now: number) => {
       const dt = Math.min(now - s.last, 64);
       s.last = now;
 
-      // Linear in time so the climb has a readable duration; the easing that
+      // Linear in time so a transition has a readable duration; the easing that
       // matters is per particle (smoothstep: soft launch, soft arrival).
-      const step = dt / (s.target ? DUR_IN_MS : DUR_OUT_MS);
-      s.progress = Math.max(0, Math.min(1, s.progress + (s.target ? step : -step)));
+      s.morph = Math.min(1, s.morph + dt / s.duration);
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, s.box.w, s.box.h);
 
-      if (s.progress <= 0 && s.target === 0) {
-        s.raf = 0;
-        s.particles = [];
-        return; // idle: stop painting entirely
+      if (s.morph >= 1) {
+        // Arrivals into the bottle are done — drop them.
+        if (s.particles.some((p) => p.dying)) s.particles = s.particles.filter((p) => !p.dying);
+        if (!s.live) {
+          s.raf = 0;
+          s.particles = [];
+          return; // idle: stop painting entirely
+        }
       }
 
       const sway = Math.sin(now * SWAY_SPEED) * SWAY_PX;
       const ptr = s.pointer;
+      const m = s.morph;
+      // At most three colours are in play (ink, the old accent, the new one);
+      // grouping by colour keeps fillStyle changes to three per frame instead
+      // of one per particle.
+      const palette = [...new Set([s.ink, s.accentA, s.accentB])];
 
-      for (const pass of [false, true]) {
-        ctx.fillStyle = pass ? s.accent : s.ink;
+      for (const colour of palette) {
+        ctx.fillStyle = colour;
         for (const p of s.particles) {
-          if (p.accent !== pass) continue;
-          const u = (s.progress - p.delay) / (1 - p.delay);
-          if (u <= 0) continue; // still in the bottle
-          const e = u >= 1 ? 1 : u * u * (3 - 2 * u); // smoothstep
+          // Colour crossfade: each particle contributes to its old colour on
+          // the way out and to its new one on the way in.
+          const colA = p.accentA ? s.accentA : s.ink;
+          const colB = p.accentB ? s.accentB : s.ink;
+          let weight = 0;
+          if (colA === colour) weight += 1 - m;
+          if (colB === colour) weight += m;
+          if (weight < ALPHA_EPS) continue;
+
+          const u = Math.min(1, (m - p.delay) / (1 - p.delay));
+          if (u <= 0 && p.born) continue; // still in the bottle
 
           let x: number;
           let y: number;
           let size: number;
           let alpha: number;
 
-          if (e >= 1) {
+          if (u >= 1 && !p.dying) {
             // --- settled: breathe, shimmer, and get out of the cursor's way --
             let pushX = 0;
             let pushY = 0;
@@ -294,26 +389,31 @@ export function GenieField({ shape, origin }: Props) {
             alpha = p.bright * wave * (1 + Math.min(FLARE_MAX, disp * 0.05));
             size = DOT_PX * (0.85 + 0.35 * wave);
           } else {
-            // --- in flight: one column out of the bottle, then unfurling -----
+            // --- in flight along this leg's curve ---------------------------
+            const e = u <= 0 ? 0 : smoothstep(u);
             const mt = 1 - e;
-            const px = mt * mt * s.origin.x + 2 * mt * e * p.cx + e * e * p.tx;
-            const py = mt * mt * s.origin.y + 2 * mt * e * p.cy + e * e * p.ty;
+            x = mt * mt * p.fx + 2 * mt * e * p.cx + e * e * p.tx;
+            y = mt * mt * p.fy + 2 * mt * e * p.cy + e * e * p.ty;
             // Swirl perpendicular to the path's tangent.
-            const dxT = 2 * mt * (p.cx - s.origin.x) + 2 * e * (p.tx - p.cx);
-            const dyT = 2 * mt * (p.cy - s.origin.y) + 2 * e * (p.ty - p.cy);
+            const dxT = 2 * mt * (p.cx - p.fx) + 2 * e * (p.tx - p.cx);
+            const dyT = 2 * mt * (p.cy - p.fy) + 2 * e * (p.ty - p.cy);
             const len = Math.hypot(dxT, dyT) || 1;
             const bulge = Math.sin(Math.PI * e);
             const angle = p.phase + p.turns * Math.PI * 2 * e;
             const swing = Math.cos(angle) * p.swirl * bulge;
-            x = px + (-dyT / len) * swing;
-            y = py + (dxT / len) * swing;
-            // Fade in as they leave, and read the near side of the swirl as
-            // larger — the cheap trick that sells a rotating column.
-            alpha = p.bright * Math.min(1, u * 3);
+            x += (-dyT / len) * swing;
+            y += (dxT / len) * swing;
+
+            alpha = p.bright;
+            if (p.born) alpha *= Math.min(1, u * 3); // fade in as it leaves
+            // Going home: stay visible for the flight, wink out at the bottle.
+            if (p.dying) alpha *= 1 - Math.max(0, (u - 0.6) / 0.4);
             size = DOT_PX * (0.6 + 0.4 * e) * (0.8 + 0.4 * (0.5 + 0.5 * Math.sin(angle)));
           }
 
-          ctx.globalAlpha = FIELD_ALPHA * s.progress * alpha;
+          p.px = x;
+          p.py = y;
+          ctx.globalAlpha = FIELD_ALPHA * weight * alpha;
           ctx.fillRect(x, y, size, size);
         }
       }
