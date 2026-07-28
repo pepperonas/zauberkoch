@@ -130,3 +130,25 @@ test('landing page for logged-out users', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Mit Google anmelden' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Was kochen wir heute?' })).toBeVisible();
 });
+
+test('the footer offers GitHub, a donation and a Google review', async ({ page }) => {
+  // The URLs *are* the feature — a typo turns each card into a dead end, and
+  // nothing else in the suite would notice.
+  await page.route('**/api/v1/me', (route) => route.fulfill({ json: { authenticated: false } }));
+  await page.goto('/');
+
+  const colophon = page.locator('.colophon');
+  await expect(colophon.getByRole('link', { name: /Open Source auf GitHub/ })).toHaveAttribute(
+    'href',
+    'https://github.com/pepperonas/zauberkoch-pwa',
+  );
+  await expect(colophon.getByRole('link', { name: /Spendier einen Espresso/ })).toHaveAttribute(
+    'href',
+    /paypal\.com\/donate/,
+  );
+  const review = colophon.getByRole('link', { name: /Bewertung auf Google/ });
+  await expect(review).toHaveAttribute('href', 'https://g.page/r/CXgdRV3QysvxEBM/review');
+  // Leaving the app must not cost a running generation, and rel guards the tab.
+  await expect(review).toHaveAttribute('target', '_blank');
+  await expect(review).toHaveAttribute('rel', /noopener/);
+});

@@ -283,6 +283,9 @@
 }
 @media (min-width: 520px) {
   .colophon { grid-template-columns: 1fr 1fr; }
+  /* Three cards in a two-column grid: the third would sit half-width and
+     orphaned. Spanning it reads as a deliberate third row instead. */
+  .colophon__card--review { grid-column: 1 / -1; }
 }
 
 .colophon__card {
@@ -320,6 +323,12 @@
 .colophon__mark--pp {
   background: var(--c-primary-container);
   color: var(--c-on-primary-container);
+}
+
+/* gold on the neutral container: a rating star reads instantly, and it keeps
+   all three marks distinguishable (dark octocat, green heart, gold star) */
+.colophon__mark--star {
+  color: var(--icon-gold);
 }
 
 .colophon__text {

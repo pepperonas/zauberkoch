@@ -304,6 +304,21 @@ function Shell() {
               <span>{t('colophon.donateBody')}</span>
             </span>
           </a>
+
+          {/* Also offered in the support dialog — but that appears once and can
+              be dismissed for good, so the one permanent place is here. */}
+          <a
+            className="colophon__card colophon__card--review"
+            href="https://g.page/r/CXgdRV3QysvxEBM/review"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className="colophon__mark colophon__mark--star" aria-hidden><Icon name="star" size={20} /></span>
+            <span className="colophon__text">
+              <strong>{t('colophon.reviewTitle')}</strong>
+              <span>{t('colophon.reviewBody')}</span>
+            </span>
+          </a>
         </div>
 
         <p className="colophon__origin">

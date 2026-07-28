@@ -560,6 +560,8 @@ export const de = {
     githubBody: 'Reinschauen & mitkochen',
     donateTitle: 'Spendier einen Espresso',
     donateBody: 'Hält die KI am Laufen',
+    reviewTitle: 'Bewertung auf Google',
+    reviewBody: 'Zwei Minuten, die viel helfen',
     madeWith: 'Mit',
     madeIn: 'in Berlin gemacht',
   },
