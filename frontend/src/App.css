@@ -275,11 +275,44 @@
    (outlined, muted) and only warming up on hover/tap — a footer should invite,
    not shout. Single column on phones, side by side from 520px. */
 .colophon {
+  position: relative; /* anchors the genie field */
   display: grid;
   gap: var(--space-3);
   max-width: 560px;
   margin: 0 auto var(--space-4);
   text-align: left;
+}
+
+/* The genie needs more room than the card block: it reaches into the free
+   space beside and below the colophon. Bounded so it stays inside the shell's
+   content box — the page must never scroll sideways because of a flourish. */
+.colophon__genie {
+  position: absolute;
+  /* Reaches well above the cards: the genie needs headroom, and a figure that
+     only fits between the card rows gets its head cut off. */
+  top: -90px;
+  bottom: -140px;
+  left: -60px;
+  right: -60px;
+  z-index: 0;
+  pointer-events: none;
+  /* Soft at both ends — a hard edge where the canvas stops would give the
+     overhang away, and the lower fade keeps the legal links out of the
+     confetti (same trick as the celox octocat band). */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 70%, transparent 98%);
+  mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 70%, transparent 98%);
+}
+.colophon__genie canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* While the figure is up, the cards let it show through — otherwise the dots
+   would assemble behind three opaque panels and only the edges would read. */
+.colophon--genie .colophon__card {
+  background-color: color-mix(in srgb, var(--c-surface-container) 55%, transparent);
 }
 @media (min-width: 520px) {
   .colophon { grid-template-columns: 1fr 1fr; }
@@ -289,6 +322,8 @@
 }
 
 .colophon__card {
+  position: relative; /* above the genie field */
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-3);

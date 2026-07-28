@@ -152,3 +152,42 @@ test('the footer offers GitHub, a donation and a Google review', async ({ page }
   await expect(review).toHaveAttribute('target', '_blank');
   await expect(review).toHaveAttribute('rel', /noopener/);
 });
+
+test.describe('colophon genie', () => {
+  const GENIE_ME = {
+    authenticated: true, is_admin: false, id: 1, email: 'a@b.de', name: 'A', picture_url: '',
+    adult_confirmed: true, has_password: true, own_key: { active: false, hint: '', since: null },
+    csrf_token: 'x',
+    preferences: { vegetarisch: false, vegan: false, glutenfrei: false, laktosefrei: false, vermeiden: [], vorraete: [], standard_personen: 2 },
+  };
+
+  async function footer(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/me', (r) => r.fulfill({ json: GENIE_ME }));
+    await page.route('**/api/v1/recipes?**', (r) => r.fulfill({ json: { items: [] } }));
+    await page.goto('/');
+    await page.locator('.colophon').scrollIntoViewIfNeeded();
+  }
+
+  test('a hovered card raises the field and leaving retracts it', async ({ page }) => {
+    await footer(page);
+    await expect(page.locator('.colophon--genie')).toHaveCount(0);
+
+    await page.locator('.colophon__card--review').hover();
+    await expect(page.locator('.colophon--genie')).toHaveCount(1);
+    // The field is armed on visibility, so the canvas is ready before the hover.
+    await expect(page.locator('.colophon__genie canvas')).toHaveCount(1);
+
+    await page.mouse.move(5, 5);
+    await expect(page.locator('.colophon--genie')).toHaveCount(0);
+  });
+
+  test('reduced motion mounts nothing at all', async ({ page }) => {
+    // Not merely "does not animate": the canvas and its chunk stay away.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await footer(page);
+    await page.locator('.colophon__card--donate').hover();
+    await page.waitForTimeout(600);
+    await expect(page.locator('.colophon__genie canvas')).toHaveCount(0);
+    await expect(page.locator('.colophon--genie')).toHaveCount(0);
+  });
+});

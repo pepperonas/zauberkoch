@@ -11,8 +11,8 @@ import {
 
 import { CrtOff, CrtOn } from './components/CrtOff';
 import { Icon, type IconName } from './components/icons';
-import { GithubMark } from './components/icons/GithubMark';
 import { ProfileSheet } from './components/ProfileSheet';
+import { Colophon } from './components/Colophon';
 import { SupportPrompt } from './components/SupportPrompt';
 import { IconButton } from './components/ui';
 import { strings, t } from './i18n';
@@ -276,50 +276,7 @@ function Shell() {
       )}
 
       <footer className="shell__footer">
-        {/* Colophon: two tappable cards (open source · support) above the
-            legal line, with a small hand-drawn-feeling origin note between. */}
-        <div className="colophon">
-          <a
-            className="colophon__card"
-            href="https://github.com/pepperonas/zauberkoch-pwa"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className="colophon__mark colophon__mark--gh" aria-hidden><GithubMark size={22} /></span>
-            <span className="colophon__text">
-              <strong>{t('colophon.githubTitle')}</strong>
-              <span>{t('colophon.githubBody')}</span>
-            </span>
-          </a>
-
-          <a
-            className="colophon__card colophon__card--donate"
-            href="https://www.paypal.com/donate/?business=martin.pfeffer%40celox.io&currency_code=EUR"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className="colophon__mark colophon__mark--pp" aria-hidden><Icon name="heart" size={20} /></span>
-            <span className="colophon__text">
-              <strong>{t('colophon.donateTitle')}</strong>
-              <span>{t('colophon.donateBody')}</span>
-            </span>
-          </a>
-
-          {/* Also offered in the support dialog — but that appears once and can
-              be dismissed for good, so the one permanent place is here. */}
-          <a
-            className="colophon__card colophon__card--review"
-            href="https://g.page/r/CXgdRV3QysvxEBM/review"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className="colophon__mark colophon__mark--star" aria-hidden><Icon name="star" size={20} /></span>
-            <span className="colophon__text">
-              <strong>{t('colophon.reviewTitle')}</strong>
-              <span>{t('colophon.reviewBody')}</span>
-            </span>
-          </a>
-        </div>
+        <Colophon />
 
         <p className="colophon__origin">
           {t('colophon.madeWith')}
