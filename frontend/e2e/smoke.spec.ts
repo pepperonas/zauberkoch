@@ -191,9 +191,10 @@ test.describe('colophon genie', () => {
       page.evaluate(() => {
         const c = document.querySelector('.colophon__genie canvas') as HTMLCanvasElement;
         const ctx = c.getContext('2d')!;
-        // The star row sits around 0.46 of the field height (see GenieField).
-        const y0 = Math.floor(c.height * 0.36);
-        const d = ctx.getImageData(0, y0, c.width, Math.floor(c.height * 0.24)).data;
+        // The star row sits around 0.235 of the field height (see GenieField) —
+        // this band has to follow it, or the test measures empty canvas.
+        const y0 = Math.floor(c.height * 0.12);
+        const d = ctx.getImageData(0, y0, c.width, Math.floor(c.height * 0.25)).data;
         let sum = 0;
         for (let i = 3; i < d.length; i += 4) sum += d[i];
         return Math.round(sum / 1000);
