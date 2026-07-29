@@ -485,10 +485,11 @@ export function GenieField({ shape, origin }: Props) {
     // have room and nothing to hide behind. The star row stays a touch lower
     // than the others — it is flat and wide, and needs less headroom.
     // The star row goes highest of the three: it is flat and wide, so it needs
-    // the least headroom. 0.235 puts it just ABOVE the "Überrasch mich" button
-    // rather than across it — measured, the button's centre sits at 0.307, and
-    // centring the row there hid the middle star behind it.
-    const fy = h * (shape === 'review' ? 0.235 : 0.4);
+    // the least headroom. Measured, the "Überrasch mich" button's centre sits
+    // at 0.307 of the field: centring the row there hid the middle star behind
+    // it, so the row rides a little higher and the button nestles into its
+    // lower edge instead.
+    const fy = h * (shape === 'review' ? 0.262 : 0.4);
     const share = shape ? ACCENT_SHARE[shape] : 0;
     const maxDelay = hadFigure && shape ? MAX_DELAY_MORPH : MAX_DELAY_IN;
 
