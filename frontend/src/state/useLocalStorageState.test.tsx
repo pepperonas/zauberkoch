@@ -6,6 +6,11 @@
  * read-on-mount are what the tests hold on to.
  *
  * Same lightweight renderHook as useOnline.test.tsx — no @testing-library.
+ *
+ * The explicit <string> matters: T is inferred from the initializer, so
+ * `() => 'a'` would pin T to the literal type "a" and reject every later
+ * value. Production call sites name the type for the same reason
+ * (`useLocalStorageState<Theme>`, `<Modus>`, `<string>`).
  */
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -34,20 +39,20 @@ function renderHook<T>(useHook: () => T) {
 
 describe('initial value', () => {
   it('falls back to the initializer when nothing is stored', () => {
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'mittel'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'mittel'));
     expect(result.current[0]).toBe('mittel');
   });
 
   it('prefers a stored value over the initializer', () => {
     localStorage.setItem('zk-test', 'anspruchsvoll');
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'mittel'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'mittel'));
     expect(result.current[0]).toBe('anspruchsvoll');
   });
 
   it('does not write the default back to storage on mount', () => {
     // Persisting an untouched default would make "never chosen" and "chose the
     // default" indistinguishable if the default ever changes.
-    renderHook(() => useLocalStorageState('zk-test', () => 'mittel'));
+    renderHook(() => useLocalStorageState<string>('zk-test', () => 'mittel'));
     expect(localStorage.getItem('zk-test')).toBeNull();
   });
 
@@ -55,7 +60,7 @@ describe('initial value', () => {
     let calls = 0;
     localStorage.setItem('zk-test', 'gespeichert');
     const { result } = renderHook(() =>
-      useLocalStorageState('zk-test', () => {
+      useLocalStorageState<string>('zk-test', () => {
         calls += 1;
         return 'teuer';
       }),
@@ -66,14 +71,14 @@ describe('initial value', () => {
 
   it('treats a stored empty string as a real value, not as absent', () => {
     localStorage.setItem('zk-test', '');
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'fallback'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'fallback'));
     expect(result.current[0]).toBe('');
   });
 });
 
 describe('writing', () => {
   it('updates the state and persists in one step', () => {
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'a'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'a'));
 
     act(() => result.current[1]('b'));
 
@@ -82,7 +87,7 @@ describe('writing', () => {
   });
 
   it('supports a functional updater based on the previous value', () => {
-    const { result } = renderHook(() => useLocalStorageState('zk-count', () => '1'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-count', () => '1'));
 
     act(() => result.current[1]((prev) => String(Number(prev) + 1)));
 
@@ -91,7 +96,7 @@ describe('writing', () => {
   });
 
   it('persists every step of a burst, not just the first', () => {
-    const { result } = renderHook(() => useLocalStorageState('zk-count', () => '0'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-count', () => '0'));
 
     act(() => {
       result.current[1]((p) => String(Number(p) + 1));
@@ -104,16 +109,16 @@ describe('writing', () => {
   });
 
   it('survives a remount — the point of the hook', () => {
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'a'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'a'));
     act(() => result.current[1]('gemerkt'));
 
-    const second = renderHook(() => useLocalStorageState('zk-test', () => 'a'));
+    const second = renderHook(() => useLocalStorageState<string>('zk-test', () => 'a'));
     expect(second.result.current[0]).toBe('gemerkt');
   });
 
   it('keeps separate keys apart', () => {
-    const a = renderHook(() => useLocalStorageState('zk-a', () => 'a'));
-    const b = renderHook(() => useLocalStorageState('zk-b', () => 'b'));
+    const a = renderHook(() => useLocalStorageState<string>('zk-a', () => 'a'));
+    const b = renderHook(() => useLocalStorageState<string>('zk-b', () => 'b'));
 
     act(() => a.result.current[1]('geändert'));
 
@@ -123,7 +128,7 @@ describe('writing', () => {
 
   it('hands back a stable setter across re-renders', () => {
     // An unstable setter would re-fire every effect that depends on it.
-    const { result } = renderHook(() => useLocalStorageState('zk-test', () => 'a'));
+    const { result } = renderHook(() => useLocalStorageState<string>('zk-test', () => 'a'));
     const first = result.current[1];
 
     act(() => result.current[1]('b'));
