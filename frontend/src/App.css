@@ -405,3 +405,72 @@
   .colophon__heart { animation: none; }
   .colophon__card { transition: none; }
 }
+
+/* ── Desktop: use the width, but not for the reading column ───────────────
+   Measured at 1512×950 before this block: the 720px shell used 48 % of the
+   window, the recipe ran 4.1 screens tall, and the history 3.4.
+
+   The tempting fix — just raise the max-width — is the worst of the options:
+   it saved 7 % of scroll height and pushed the step text from 77 to ~125
+   characters per line, well past the 45–75 the eye tracks comfortably. The
+   empty margins were never the problem; the column COUNT was.
+
+   So the extra width goes to things that are lists, not prose:
+     recipe   3901 → 2718px (−31 %) — ingredients beside the steps
+     history  3256 → 2048px (−37 %) — two card columns
+     favorites 1934 → 1509px (−22 %)
+
+   Everything is gated at 1100px so phones and tablets keep the layout the
+   shared-element morphs were tuned against — below the breakpoint not a single
+   declaration here applies. */
+@media (min-width: 1100px) {
+  .shell { max-width: 1120px; }
+  .shell__header { width: min(100%, 1120px); }
+
+  /* Collections read as a grid; the cards keep their own internal layout. */
+  .cardgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start; /* a short card must not stretch to its neighbour */
+  }
+
+  /* Recipe detail: the cookbook split. Ingredients stay in view while the
+     steps are read — the reason to do this at all is not the saved scrolling
+     but that you stop bouncing between the two while cooking. */
+  .recipe {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    column-gap: var(--space-6);
+    align-items: start;
+  }
+  .recipe > * { grid-column: 2; }
+  .recipe .hero { grid-column: 1 / -1; }
+  .recipe__zutaten {
+    grid-column: 1;
+    /* Span the implicit rows so the sticky element has a tall containing block.
+       `-1` would resolve to the last EXPLICIT line (row 2 here) and pin it to a
+       single row, which makes the sticky a no-op. */
+    grid-row: 2 / span 20;
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-4));
+  }
+
+  /* Hold the measure no matter how wide the column gets. Without this the
+     steps land at 80 characters — wider than before the split, which would
+     have made the change a net loss for reading. */
+  .recipe__schritte p,
+  .recipe__tipps .tipp { max-width: 66ch; }
+
+  /* A search field does not get better at 1120px. */
+  input[type="search"].input { max-width: 480px; }
+
+  /* Row lists (shopping, weekly plan) opt OUT of the width. Each row carries
+     its action at the far right, so the extra space lands *inside* the row:
+     at 1120px the ✕ sits ~900px from the item it deletes, and a struck-through
+     line runs the full width of the window. Left-aligned rather than centred so
+     the list keeps the shell's left edge, shared with the header and the page
+     title. Verified by looking: the wide version was worse than the 720px one,
+     which is why this exception exists at all. */
+  .page--rows > * { max-width: 760px; }
+}

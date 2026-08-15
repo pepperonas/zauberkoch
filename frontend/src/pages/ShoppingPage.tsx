@@ -164,7 +164,7 @@ export function ShoppingPage() {
 
   if (view === 'gerichte') {
     return (
-      <div>
+      <div className="page--rows">
         <h1 className="page__title">{t('shopping.title')}</h1>
         <div className="stack">
           <Segmented<View>
@@ -182,7 +182,7 @@ export function ShoppingPage() {
   }
 
   return (
-    <div>
+    <div className="page--rows">
       <h1 className="page__title">{t('shopping.title')}</h1>
       <div className="stack">
         <Segmented<View>

@@ -59,7 +59,9 @@ export function FavoritesPage() {
         ) : filtered.length === 0 ? (
           <StateNote icon="star">{t('favorites.empty')}</StateNote>
         ) : (
-          filtered.map((item, i) => <RecipeCard key={item.id} item={item} index={i} />)
+          <div className="cardgrid">
+            {filtered.map((item, i) => <RecipeCard key={item.id} item={item} index={i} />)}
+          </div>
         )}
       </div>
     </div>

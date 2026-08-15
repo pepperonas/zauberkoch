@@ -58,7 +58,9 @@ export function HistoryPage() {
         ) : items.length === 0 ? (
           <StateNote icon="history">{t('history.empty')}</StateNote>
         ) : (
-          items.map((item, i) => <RecipeCard key={item.id} item={item} index={i} />)
+          <div className="cardgrid">
+            {items.map((item, i) => <RecipeCard key={item.id} item={item} index={i} />)}
+          </div>
         )}
       </div>
     </div>

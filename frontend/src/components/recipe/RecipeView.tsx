@@ -91,7 +91,8 @@ export function RecipeView({ data, mode, streaming = false, actions, onPortionen
   );
 
   return (
-    <div>
+    // `recipe` is the desktop two-column grid container (see App.css).
+    <div className="recipe">
       {meta && (
         // When arriving via the shared-element morph, DON'T play the framer
         // entrance: animating the hero container fights the VT snapshot and
@@ -134,7 +135,7 @@ export function RecipeView({ data, mode, streaming = false, actions, onPortionen
       )}
 
       {data.zutaten.length > 0 && (
-        <section className="section" style={vtn('zk-d-ing')}>
+        <section className="section recipe__zutaten" style={vtn('zk-d-ing')}>
           <div className="section__head">
             <h2>{t('recipe.ingredients')}</h2>
             <div className="stepper" aria-label={mode === 'cocktail' ? t('wizard.drinks') : t('recipe.servings')}>
@@ -181,7 +182,7 @@ export function RecipeView({ data, mode, streaming = false, actions, onPortionen
       )}
 
       {data.schritte.length > 0 && (
-        <section className="section" style={vtn('zk-d-steps')}>
+        <section className="section recipe__schritte" style={vtn('zk-d-steps')}>
           <h2>{t('recipe.steps')}</h2>
           {data.schritte.map((schritt, i) => (
             <SchrittRow key={schritt.nr ?? i} schritt={schritt} streaming={streaming} />
@@ -190,7 +191,7 @@ export function RecipeView({ data, mode, streaming = false, actions, onPortionen
       )}
 
       {data.tipps.length > 0 && (
-        <section className="section">
+        <section className="section recipe__tipps">
           <h2>{t('recipe.tips')}</h2>
           <div style={{ marginTop: 'var(--space-3)' }}>
             {data.tipps.map((tipp, i) => (
@@ -204,7 +205,7 @@ export function RecipeView({ data, mode, streaming = false, actions, onPortionen
       )}
 
       {data.naehrwerte && (
-        <section className="section">
+        <section className="section recipe__naehrwerte">
           <h2>{t('recipe.nutrition')}</h2>
           <div className="nutri" style={{ marginTop: 'var(--space-3)' }}>
             {data.naehrwerte.kalorien_kcal != null && (

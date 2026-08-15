@@ -76,7 +76,7 @@ export function PlanPage() {
   };
 
   return (
-    <div>
+    <div className="page--rows">
       <h1 className="page__title"><Icon name="calendar" size={22} /> {t('plan.title')}</h1>
 
       <div className="row row--between" style={{ marginBottom: 'var(--space-4)' }}>
