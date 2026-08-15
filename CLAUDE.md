@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Projekt: Zauberkoch 🧑‍🍳🍸 — KI-Rezept- & Cocktail-Generator
 
-Mobile-first Web-App unter **https://zauberkoch.de**: Nutzer wählt Modus (Kochen/Cocktail), Länderküche, Geschmacksrichtungen und Constraints in einem 3-Schritt-Wizard — die Claude-API generiert ein vollständiges Rezept, das sich **live per SSE-Streaming aufbaut** (Titel → Zutaten → Schritte). Repo: `pepperonas/zauberkoch-pwa` (öffentlich, Open Source — auf der Landing-Page verlinkt). **Offene Selbstbedienungs-Registrierung** via Google; **zur Laufzeit im Admin-Panel umschaltbar** (Toggle „Offene Registrierung", `app_settings.open_signup`, überschreibt den `OPEN_SIGNUP`-Config-Default) — aus → Allowlist gatet. Invite-Codes wurden entfernt (2026-07-12).
+Mobile-first Web-App unter **https://zauberkoch.de**: Nutzer wählt Modus (Kochen/Cocktail), Länderküche, Geschmacksrichtungen und Constraints in einem 3-Schritt-Wizard — die Claude-API generiert ein vollständiges Rezept, das sich **live per SSE-Streaming aufbaut** (Titel → Zutaten → Schritte). Repo: `pepperonas/zauberkoch` (öffentlich, Open Source — auf der Landing-Page verlinkt). **Offene Selbstbedienungs-Registrierung** via Google; **zur Laufzeit im Admin-Panel umschaltbar** (Toggle „Offene Registrierung", `app_settings.open_signup`, überschreibt den `OPEN_SIGNUP`-Config-Default) — aus → Allowlist gatet. Invite-Codes wurden entfernt (2026-07-12).
 
 ## Tech-Stack
 

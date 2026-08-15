@@ -24,7 +24,7 @@ export type BudgetVariant = 'short' | 'standard' | 'warm' | 'fun';
 export const VARIANT: BudgetVariant = 'standard';
 
 const DONATE_URL = 'https://www.paypal.com/donate/?business=martin.pfeffer%40celox.io&currency_code=EUR';
-const REPO_URL = 'https://github.com/pepperonas/zauberkoch-pwa';
+const REPO_URL = 'https://github.com/pepperonas/zauberkoch';
 
 const COPY: Record<BudgetVariant, { title: string; body: string }> = {
   short: { title: 'budget.shortTitle', body: 'budget.shortBody' },

@@ -273,7 +273,7 @@ function TryWizard({ onLogin }: { onLogin: () => void }) {
       <p className="muted" style={{ marginTop: 'var(--space-2)', font: 'var(--type-label-sm)' }}>
         {t('landing.freeNote')}{' '}
         <a
-          href="https://github.com/pepperonas/zauberkoch-pwa"
+          href="https://github.com/pepperonas/zauberkoch"
           target="_blank"
           rel="noopener noreferrer"
           style={{ textDecoration: 'underline' }}

@@ -262,7 +262,7 @@ def verify_email(
         db.commit()
         background.add_task(
             mailer.send_welcome_email, user.email, user.name,
-            _frontend_url("/"), "https://github.com/pepperonas/zauberkoch-pwa",
+            _frontend_url("/"), "https://github.com/pepperonas/zauberkoch",
         )
         logger.info("email verified user=%s", user.id)
 

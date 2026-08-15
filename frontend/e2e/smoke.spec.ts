@@ -140,7 +140,7 @@ test('the footer offers GitHub, a donation and a Google review', async ({ page }
   const colophon = page.locator('.colophon');
   await expect(colophon.getByRole('link', { name: /Open Source auf GitHub/ })).toHaveAttribute(
     'href',
-    'https://github.com/pepperonas/zauberkoch-pwa',
+    'https://github.com/pepperonas/zauberkoch',
   );
   await expect(colophon.getByRole('link', { name: /Spendier einen Espresso/ })).toHaveAttribute(
     'href',

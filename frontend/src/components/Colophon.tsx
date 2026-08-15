@@ -20,7 +20,7 @@ const GenieField = lazy(() =>
   import('./colophon/GenieField').then((m) => ({ default: m.GenieField })),
 );
 
-const GITHUB_URL = 'https://github.com/pepperonas/zauberkoch-pwa';
+const GITHUB_URL = 'https://github.com/pepperonas/zauberkoch';
 const DONATE_URL = 'https://www.paypal.com/donate/?business=martin.pfeffer%40celox.io&currency_code=EUR';
 const REVIEW_URL = 'https://g.page/r/CXgdRV3QysvxEBM/review';
 

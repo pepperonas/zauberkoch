@@ -37,7 +37,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pepperonas/zauberkoch-pwa.git"
+    "url": "https://github.com/pepperonas/zauberkoch.git"
   },
   "overrides": {
     "postcss": "^8.5.18"

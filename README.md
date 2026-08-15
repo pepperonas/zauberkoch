@@ -4,19 +4,19 @@
 
 **Sag, worauf du Lust hast — die KI schreibt das Rezept, und du siehst ihm beim Entstehen zu.**
 
-[![CI](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml)
+[![CI](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/Tests-638%20%2B%2013%20E2E-2ea44f)](#tests)
 [![Coverage](https://img.shields.io/badge/Backend--Coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#qualität--messwerte)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
-[![Lizenz](https://img.shields.io/github/license/pepperonas/zauberkoch-pwa?label=Lizenz&color=2ea44f)](LICENSE)
+[![Lizenz](https://img.shields.io/github/license/pepperonas/zauberkoch?label=Lizenz&color=2ea44f)](LICENSE)
 
-[![Letzter Commit](https://img.shields.io/github/last-commit/pepperonas/zauberkoch-pwa?label=letzter%20Commit)](https://github.com/pepperonas/zauberkoch-pwa/commits/main)
-[![Code-Größe](https://img.shields.io/github/languages/code-size/pepperonas/zauberkoch-pwa?label=Code)](#projektstruktur)
-[![Sprachen](https://img.shields.io/github/languages/count/pepperonas/zauberkoch-pwa?label=Sprachen)](#stack)
-[![Issues](https://img.shields.io/github/issues/pepperonas/zauberkoch-pwa?label=Issues)](https://github.com/pepperonas/zauberkoch-pwa/issues)
-[![Stars](https://img.shields.io/github/stars/pepperonas/zauberkoch-pwa?label=Stars&color=f0b429)](https://github.com/pepperonas/zauberkoch-pwa/stargazers)
-[![Forks](https://img.shields.io/github/forks/pepperonas/zauberkoch-pwa?label=Forks)](https://github.com/pepperonas/zauberkoch-pwa/network/members)
+[![Letzter Commit](https://img.shields.io/github/last-commit/pepperonas/zauberkoch?label=letzter%20Commit)](https://github.com/pepperonas/zauberkoch/commits/main)
+[![Code-Größe](https://img.shields.io/github/languages/code-size/pepperonas/zauberkoch?label=Code)](#projektstruktur)
+[![Sprachen](https://img.shields.io/github/languages/count/pepperonas/zauberkoch?label=Sprachen)](#stack)
+[![Issues](https://img.shields.io/github/issues/pepperonas/zauberkoch?label=Issues)](https://github.com/pepperonas/zauberkoch/issues)
+[![Stars](https://img.shields.io/github/stars/pepperonas/zauberkoch?label=Stars&color=f0b429)](https://github.com/pepperonas/zauberkoch/stargazers)
+[![Forks](https://img.shields.io/github/forks/pepperonas/zauberkoch?label=Forks)](https://github.com/pepperonas/zauberkoch/network/members)
 [![PRs willkommen](https://img.shields.io/badge/PRs-willkommen-2ea44f)](CONTRIBUTING.md)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](backend/)
