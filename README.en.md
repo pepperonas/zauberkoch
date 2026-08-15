@@ -5,8 +5,8 @@
 **Say what you feel like eating — the AI writes the recipe, and you watch it being written.**
 
 [![CI](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-374%20%2B%2013%20E2E-2ea44f)](#tests)
-[![Coverage](https://img.shields.io/badge/Backend%20coverage-94%25-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-638%20%2B%2013%20E2E-2ea44f)](#tests)
+[![Coverage](https://img.shields.io/badge/Backend%20coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#quality--numbers)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
 [![License](https://img.shields.io/github/license/pepperonas/zauberkoch-pwa?color=2ea44f)](LICENSE)
@@ -259,7 +259,7 @@ backend/                 ~5,500 lines of Python (+ ~3,500 lines of tests)
   app/prompts/           recipe_v1 … recipe_v5 — VERSIONED, the core of the product
   alembic/versions/      16 migrations (never change the schema without one)
   scripts/               allowlist · stats · smoke_ai · showcase · email_preview
-  tests/                 248 tests
+  tests/                 434 tests
 
 frontend/                ~16,500 lines of TS/TSX/CSS
   src/styles/tokens.css  M3 color schemes (cooking = green, drinks = violet) × light/dark
@@ -306,19 +306,21 @@ Google OAuth setup: [`docs/GOOGLE-OAUTH.md`](docs/GOOGLE-OAUTH.md) · deployment
 ## Tests
 
 ```bash
-cd backend  && pytest                    # 248 tests
-cd backend  && pytest --cov=app          # 94 % statement coverage
-cd frontend && npm test                  # 126 tests (Vitest)
+cd backend  && pytest                    # 434 tests
+cd backend  && pytest --cov=app          # 99 % statement coverage
+cd frontend && npm test                  # 204 tests (Vitest)
 cd frontend && npx playwright test       # 13 E2E tests (local)
 ```
 
-**374 unit/integration tests plus 13 E2E tests run on every push** via
+**638 unit/integration tests plus 13 E2E tests run on every push** via
 [GitHub Actions](.github/workflows/ci.yml). **No test ever calls the real Anthropic API.**
 
-Covered, among other things: auth (Google **and** email/password), rate limits and the registration cap,
-cache and dedup, the incremental SSE parser, AI orchestration, the prompt versions, sharing and OG
-rendering, the cost model with its price effective dates, account export and deletion, and the BYOK
-encryption.
+Covered, among other things: auth (Google **and** email/password) including ID-token validation and the
+OAuth callback's failure paths, rate limits and the registration cap, cache and dedup, the incremental
+SSE parser, AI orchestration and client lifecycle, the prompt versions, sharing and OG rendering, the
+cost model with its price effective dates, account export and deletion, the BYOK encryption,
+**cross-account isolation** (every mutating route is probed from a second account) and **what happens
+when the model call dies** — a failure has to arrive as an SSE event, not as a hung stream.
 
 Frontend unit coverage sits at ~21 % project-wide — deliberately: the tests target the logic layer
 (`lib`/`state`/`i18n`), the React surface belongs to Playwright.
@@ -334,8 +336,8 @@ reproduced for real — the test fails without the guard.
 | Measurement | Value | As of |
 |---|---|---|
 | Lighthouse (performance / a11y / best practices / SEO) | **99 / 100 / 100 / 100** | against production, 2026-07-11 |
-| Backend coverage (statements) | **94 %** | 2026-08-15 |
-| Tests | **248** backend · **126** frontend · **13** E2E | 2026-08-15 |
+| Backend coverage (statements) | **99 %** | 2026-08-15 |
+| Tests | **434** backend · **204** frontend · **13** E2E | 2026-08-15 |
 | Cost per live generation | ~3–4 cents | Sonnet 5, measured |
 
 Non-negotiable when changing things: touch targets ≥ 48 px, a visible `:focus-visible`, contrast ≥ AA,

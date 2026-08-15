@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.services import ratelimit_ip
+from app.services import aggregation, ratelimit_ip
 from app.services.aggregation import format_amount, normalize
 from tests.test_generation import PARAMS, generate, logged_in, mock_ai  # noqa: F401 (fixtures)
 
@@ -175,3 +175,163 @@ class TestUnitSpellings:
                     headers=logged_in)
         items = client.get("/api/v1/shopping").json()["items"]
         assert len([i for i in items if i["name"] == "Butter"]) == 2
+
+
+# -- merge-key helpers -----------------------------------------------------
+# The spelling table itself is covered by TestUnitSpellings above; what is
+# missing there is the *negative* side and the display/merge-key split.
+
+
+def test_different_units_stay_apart():
+    """Merging is only safe within a dimension — 2 Bund and 2 Zehen Knoblauch
+    are not 4 of anything."""
+    bund = aggregation.normalize("Knoblauch", 2, "Bund")
+    zehen = aggregation.normalize("Knoblauch", 2, "Zehen")
+    assert aggregation.merge_key(bund) != aggregation.merge_key(zehen)
+
+
+def test_name_matching_ignores_case_and_padding_only():
+    """Case and whitespace are noise; a different word is a different item."""
+    assert aggregation.normalize("  Tomate ", 1, "Stk").name_key == aggregation.normalize("tomate", 1, "Stk").name_key
+    assert aggregation.normalize("Tomate", 1, "Stk").name_key != aggregation.normalize("Tomaten", 1, "Stk").name_key
+
+
+def test_display_name_keeps_the_original_spelling():
+    """The merge key is lowercased, but the list must not shout back in
+    lowercase — the shopper reads the display name."""
+    item = aggregation.normalize("  Fior di Latte ", 250, "g")
+    assert item.name == "Fior di Latte"
+    assert item.name_key == "fior di latte"
+
+
+# -- display formatting ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "menge, einheit, expected",
+    [
+        (999, "g", (999, "g")),
+        (1000, "g", (1.0, "kg")),  # boundary: exactly 1000 flips
+        (1500, "g", (1.5, "kg")),
+        (999, "ml", (999, "ml")),
+        (1000, "ml", (1.0, "l")),
+        (2, "Stück", (2, "Stück")),  # unrelated units are untouched
+        (1000, "Stück", (1000, "Stück")),  # 1000 pieces are not 1 "kStück"
+    ],
+)
+def test_format_amount_boundaries(menge, einheit, expected):
+    assert aggregation.format_amount(menge, einheit) == expected
+
+
+def test_format_amount_rounds_to_two_places():
+    """Floating-point sums like 0.1+0.2 must not reach the user as 0.30000000004."""
+    assert aggregation.format_amount(0.1 + 0.2, "kg") == (0.3, "kg")
+
+
+# -- scaling ---------------------------------------------------------------
+
+
+def test_scale_multiplies_numbers_and_passes_text_through():
+    assert aggregation.scale(250, 2) == 500.0
+    assert aggregation.scale("nach Geschmack", 3) == "nach Geschmack"
+    assert aggregation.scale(None, 3) is None
+
+
+def test_scale_by_one_is_lossless():
+    """Serving-size scaling runs on every cache hit; factor 1 must be a no-op."""
+    assert aggregation.scale(0.5, 1) == 0.5
+
+
+# -- merge branches in "add a whole recipe" --------------------------------
+
+
+def test_a_nameless_ingredient_is_skipped(client, db_session, logged_in, mock_ai):  # noqa: F811
+    """A blank name would show up as an empty row nobody can act on."""
+    import json
+
+    from app.models import Recipe, User
+
+    alice = db_session.query(User).filter(User.email == "alice@example.com").one()
+    recipe = Recipe(
+        user_id=alice.id, mode="kochen", params_json="{}",
+        recipe_json=json.dumps({
+            "titel": "Lücke", "portionen": 2,
+            "zutaten": [{"name": "   ", "menge": 1, "einheit": "Stück"},
+                        {"name": "Salz", "menge": None, "einheit": ""}],
+            "schritte": [],
+        }),
+        titel="Lücke", kueche="Test", prompt_version="v5", model="test",
+    )
+    db_session.add(recipe)
+    db_session.commit()
+
+    r = client.post("/api/v1/shopping/from-recipe", json={"recipe_id": recipe.id}, headers=logged_in)
+
+    assert [i["name"] for i in r.json()["items"]] == ["Salz"]
+
+
+def test_a_free_text_ingredient_already_on_the_list_is_not_duplicated(client, db_session, logged_in, mock_ai):  # noqa: F811
+    """"Salz — nach Geschmack" has no amount to add up, so a second recipe
+    calling for it must leave the single row alone."""
+    import json
+
+    from app.models import Recipe, User
+
+    alice = db_session.query(User).filter(User.email == "alice@example.com").one()
+    body = json.dumps({
+        "titel": "Salzig", "portionen": 2,
+        "zutaten": [{"name": "Salz", "menge": "nach Geschmack", "einheit": ""}],
+        "schritte": [],
+    })
+    for _ in range(2):
+        recipe = Recipe(
+            user_id=alice.id, mode="kochen", params_json="{}", recipe_json=body,
+            titel="Salzig", kueche="Test", prompt_version="v5", model="test",
+        )
+        db_session.add(recipe)
+        db_session.commit()
+        r = client.post("/api/v1/shopping/from-recipe", json={"recipe_id": recipe.id}, headers=logged_in)
+
+    salz = [i for i in r.json()["items"] if i["name"] == "Salz"]
+    assert len(salz) == 1
+    assert salz[0]["menge"] is None
+
+
+def test_the_list_has_a_hard_ceiling(client, db_session, logged_in, mock_ai):  # noqa: F811
+    """Bulk-adding a whole week of recipes must not grow the list without
+    bound — the UI would become unusable long before the DB minded."""
+    import json
+
+    from app.api.v1.shopping import MAX_ITEMS
+    from app.models import Recipe, ShoppingListItem, User
+
+    alice = db_session.query(User).filter(User.email == "alice@example.com").one()
+    for i in range(MAX_ITEMS):
+        db_session.add(ShoppingListItem(user_id=alice.id, name=f"Ding {i}", menge=1, einheit="Stück", position=i))
+    recipe = Recipe(
+        user_id=alice.id, mode="kochen", params_json="{}",
+        recipe_json=json.dumps({
+            "titel": "Einer zu viel", "portionen": 2,
+            "zutaten": [{"name": "Tropfen zuviel", "menge": 1, "einheit": "Stück"}],
+            "schritte": [],
+        }),
+        titel="Einer zu viel", kueche="Test", prompt_version="v5", model="test",
+    )
+    db_session.add(recipe)
+    db_session.commit()
+
+    r = client.post("/api/v1/shopping/from-recipe", json={"recipe_id": recipe.id}, headers=logged_in)
+
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "list_full"
+
+
+def test_deleting_an_item_removes_exactly_that_row(client, logged_in, mock_ai):  # noqa: F811
+    a = client.post("/api/v1/shopping/items", json={"name": "Zitronen", "menge": 3, "einheit": "Stück"}, headers=logged_in).json()
+    b = client.post("/api/v1/shopping/items", json={"name": "Olivenöl"}, headers=logged_in).json()
+
+    r = client.delete(f"/api/v1/shopping/items/{a['id']}", headers=logged_in)
+
+    assert r.json() == {"deleted": True}
+    remaining = [i["id"] for i in client.get("/api/v1/shopping", headers=logged_in).json()["items"]]
+    assert remaining == [b["id"]]

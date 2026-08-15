@@ -5,8 +5,8 @@
 **Sag, worauf du Lust hast — die KI schreibt das Rezept, und du siehst ihm beim Entstehen zu.**
 
 [![CI](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch-pwa/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-374%20%2B%2013%20E2E-2ea44f)](#tests)
-[![Coverage](https://img.shields.io/badge/Backend--Coverage-94%25-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-638%20%2B%2013%20E2E-2ea44f)](#tests)
+[![Coverage](https://img.shields.io/badge/Backend--Coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#qualität--messwerte)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
 [![Lizenz](https://img.shields.io/github/license/pepperonas/zauberkoch-pwa?label=Lizenz&color=2ea44f)](LICENSE)
@@ -259,7 +259,7 @@ backend/                 ~5.500 Zeilen Python (+ ~3.500 Zeilen Tests)
   app/prompts/           recipe_v1 … recipe_v5 — VERSIONIERT, das Kernstück
   alembic/versions/      16 Migrationen (nie Schema ohne Migration ändern)
   scripts/               allowlist · stats · smoke_ai · showcase · email_preview
-  tests/                 248 Tests
+  tests/                 434 Tests
 
 frontend/                ~16.500 Zeilen TS/TSX/CSS
   src/styles/tokens.css  M3-Farbschemata (Kochen=Grün, Drinks=Violett) × Light/Dark
@@ -317,19 +317,22 @@ Google-OAuth-Einrichtung: [`docs/GOOGLE-OAUTH.md`](docs/GOOGLE-OAUTH.md) · Depl
 ## Tests
 
 ```bash
-cd backend  && pytest                    # 248 Tests
-cd backend  && pytest --cov=app          # 94 % Statement-Coverage
-cd frontend && npm test                  # 126 Tests (Vitest)
+cd backend  && pytest                    # 434 Tests
+cd backend  && pytest --cov=app          # 99 % Statement-Coverage
+cd frontend && npm test                  # 204 Tests (Vitest)
 cd frontend && npx playwright test       # 13 E2E-Tests (lokal)
 ```
 
-**374 Unit-/Integrationstests plus 13 E2E-Tests laufen bei jedem Push** als
+**638 Unit-/Integrationstests plus 13 E2E-Tests laufen bei jedem Push** als
 [GitHub Action](.github/workflows/ci.yml). **Kein Test ruft die echte Anthropic-API auf.**
 
-Abgedeckt sind unter anderem: Auth (Google **und** E-Mail/Passwort), Rate-Limits und Registrierungs-Cap,
-Cache und Dedup, der inkrementelle SSE-Parser, die KI-Orchestrierung, die Prompt-Versionen, Share und
-OG-Rendering, das Kostenmodell mit Preis-Stichtagen, Konto-Export und -Löschung sowie die
-BYOK-Verschlüsselung.
+Abgedeckt sind unter anderem: Auth (Google **und** E-Mail/Passwort) samt ID-Token-Prüfung und den
+Fehlerwegen des OAuth-Callbacks, Rate-Limits und Registrierungs-Cap, Cache und Dedup, der inkrementelle
+SSE-Parser, die KI-Orchestrierung und der Client-Lebenszyklus, die Prompt-Versionen, Share und
+OG-Rendering, das Kostenmodell mit Preis-Stichtagen, Konto-Export und -Löschung, die
+BYOK-Verschlüsselung, **konten­übergreifende Isolation** (jede schreibende Route wird aus einem zweiten
+Konto probiert) und **was passiert, wenn der Modell-Aufruf stirbt** — ein Fehler muss als SSE-Event
+ankommen, nicht als hängender Stream.
 
 Die Unit-Coverage im Frontend liegt projektweit bei ~21 % — bewusst: die Tests decken die Logik-Schicht
 (`lib`/`state`/`i18n`) ab, die React-Oberfläche gehört zu Playwright.
@@ -345,8 +348,8 @@ läuft" wird echt nachgestellt — der Test schlägt ohne den Guard fehl.
 | Messung | Wert | Stand |
 |---|---|---|
 | Lighthouse (Performance / A11y / Best Practices / SEO) | **99 / 100 / 100 / 100** | gegen Produktion, 2026-07-11 |
-| Backend-Coverage (Statements) | **94 %** | 2026-08-15 |
-| Tests | **248** Backend · **126** Frontend · **13** E2E | 2026-08-15 |
+| Backend-Coverage (Statements) | **99 %** | 2026-08-15 |
+| Tests | **434** Backend · **204** Frontend · **13** E2E | 2026-08-15 |
 | Kosten je Live-Generierung | ~3–4 ct | Sonnet 5, gemessen |
 
 Nicht verhandelbar bei Änderungen: Touch-Targets ≥ 48 px, sichtbarer `:focus-visible`, Kontrast ≥ AA,

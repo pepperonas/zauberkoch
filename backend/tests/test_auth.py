@@ -185,3 +185,32 @@ def test_expired_session_rejected(client, db_session, monkeypatch):
     db_session.commit()
 
     assert client.get("/api/v1/me").json()["authenticated"] is False
+
+
+def test_a_session_whose_user_row_is_gone_is_rejected(client):
+    """The session table and the user table can disagree for a moment during
+    account deletion. A dangling session must fail closed with 401 rather than
+    let the request run with `user = None`.
+
+    The state is injected through the dependency instead of being manufactured
+    in the DB: a real dangling row cannot be created while the foreign key is
+    enforced, and switching `PRAGMA foreign_keys` off is both a no-op inside a
+    transaction and a way to poison a pooled connection for later tests.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.security import get_current_session
+    from app.models import Session as SessionModel
+
+    ghost = SessionModel(
+        token="ghost", csrf_token="ghost", user_id=999_999,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    client.app.dependency_overrides[get_current_session] = lambda: ghost
+    try:
+        r = client.get("/api/v1/shopping")
+    finally:
+        client.app.dependency_overrides.clear()
+
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "unauthorized"
