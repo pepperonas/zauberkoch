@@ -15,6 +15,7 @@ import { t } from '../i18n';
 import { api } from '../lib/api';
 import { formatZutatMenge } from '../lib/units';
 import type { RecipeListItem, ShoppingItem } from '../lib/types';
+import { clearTabTransition } from '../lib/tabTransition';
 import { riseIn, spring, springBouncy, stagger } from '../motion/springs';
 import { useLocalStorageState } from '../state/useLocalStorageState';
 import { SHARED_MOTIF, SHARED_TITLE } from '../state/viewTransition';
@@ -168,6 +169,7 @@ export function ShoppingPage() {
         <h1 className="page__title">{t('shopping.title')}</h1>
         <div className="stack">
           <Segmented<View>
+            className="page-tools"
             options={[
               { value: 'liste', label: <><Icon name="cart" size={15} /> {t('shopping.viewList')}</> },
               { value: 'gerichte', label: <><Icon name="plate" size={15} /> {t('shopping.viewByRecipe')}</> },
@@ -186,6 +188,7 @@ export function ShoppingPage() {
       <h1 className="page__title">{t('shopping.title')}</h1>
       <div className="stack">
         <Segmented<View>
+            className="page-tools"
           options={[
             { value: 'liste', label: t('shopping.viewList') },
             { value: 'gerichte', label: t('shopping.viewByRecipe') },
@@ -319,6 +322,7 @@ function RecipeRow({
   const queryOpts = { queryKey: ['recipes', item.id], queryFn: () => api.recipe(item.id) };
   const openRecipe = async () => {
     await queryClient.ensureQueryData(queryOpts); // hero must render synchronously
+    clearTabTransition(); // a detail morph must never inherit a tab slide
     navigate(`/rezept/${item.id}`, { viewTransition: true });
   };
 

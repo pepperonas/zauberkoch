@@ -19,6 +19,7 @@ import { strings, t } from './i18n';
 import { api } from './lib/api';
 import { clearApiCache, LAST_ACCOUNT_KEY, shouldClearApiCache } from './lib/apiCache';
 import { spring } from './motion/springs';
+import { clearTabTransition, markTabTransition, TAB_DIR_TTL_MS, TAB_ORDER } from './lib/tabTransition';
 import { cancelGeneration, getGeneration } from './state/generation';
 import { useApp } from './state/app';
 import { useOnline } from './state/useOnline';
@@ -69,13 +70,16 @@ const GenerationBar = lazyPage('genbar', () =>
   import('./components/GenerationPill').then((m) => ({ default: m.GenerationBar })),
 );
 
-const NAV_ITEMS: { to: string; icon: IconName; label: string }[] = [
-  { to: '/', icon: 'sparkles', label: strings.nav.generate },
-  { to: '/favoriten', icon: 'star', label: strings.nav.favorites },
-  { to: '/verlauf', icon: 'history', label: strings.nav.history },
-  { to: '/einkauf', icon: 'cart', label: strings.nav.shopping },
-  { to: '/plan', icon: 'calendar', label: strings.nav.plan },
-];
+// Icon + label per tab; the ORDER lives in TAB_ORDER (lib/tabTransition), so
+// the slide direction of a tab switch can never disagree with the bar itself.
+const NAV_META: Record<string, { icon: IconName; label: string }> = {
+  '/': { icon: 'sparkles', label: strings.nav.generate },
+  '/favoriten': { icon: 'star', label: strings.nav.favorites },
+  '/verlauf': { icon: 'history', label: strings.nav.history },
+  '/einkauf': { icon: 'cart', label: strings.nav.shopping },
+  '/plan': { icon: 'calendar', label: strings.nav.plan },
+};
+const NAV_ITEMS = TAB_ORDER.map((to) => ({ to, ...NAV_META[to] }));
 
 /**
  * App shell (layout route). Route changes are animated by react-router's BUILT-IN
@@ -147,6 +151,17 @@ function Shell() {
   useEffect(() => {
     if (crtPhase === 'done' && !me) setCrtPhase('idle'); // landing is there — reveal
   }, [crtPhase, me]);
+
+  // Retire the data-tab-dir stamp once its transition is over. The delay must
+  // outlive the animation (the stamp scopes the running CSS), and being gone
+  // before the next unrelated navigation is what keeps the card→detail morph
+  // from inheriting a sideways slide. Re-clicking a tab within the window is
+  // fine: its onClick stamps fresh before this timer would have mattered.
+  useEffect(() => {
+    if (!('tabDir' in document.documentElement.dataset)) return;
+    const timer = window.setTimeout(clearTabTransition, TAB_DIR_TTL_MS);
+    return () => window.clearTimeout(timer);
+  }, [location]);
 
   // Warm the route chunks on idle so navigating never hits a blank Suspense
   // fallback (the flash between an instant DOM swap and the entering animation).
@@ -305,6 +320,10 @@ function Shell() {
                 to={item.to}
                 end={item.to === '/'}
                 viewTransition
+                // Stamps data-tab-dir on <html> before react-router calls
+                // startViewTransition — the old snapshot must already carry it
+                // (it scopes the slide direction AND the title/tools names).
+                onClick={() => markTabTransition(location.pathname, item.to)}
                 className={({ isActive }) => `nav__item ${isActive ? 'nav__item--active' : ''}`}
               >
                 {({ isActive }) => (

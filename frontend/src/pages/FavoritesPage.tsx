@@ -35,7 +35,7 @@ export function FavoritesPage() {
     <div>
       <h1 className="page__title">{t('favorites.title')}</h1>
       <div className="stack">
-        <div className="chips">
+        <div className="chips page-tools">
           <Chip selected={mode === ''} onToggle={() => setMode('')}>{t('favorites.filterAll')}</Chip>
           <Chip selected={mode === 'kochen'} onToggle={() => setMode(mode === 'kochen' ? '' : 'kochen')}>
             <Icon name="pan" size={13} /> {t('wizard.modeKochen')}

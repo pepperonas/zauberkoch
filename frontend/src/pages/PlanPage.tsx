@@ -17,6 +17,7 @@ import { useShoppingUndo } from '../state/useShoppingUndo';
 import { strings, t } from '../i18n';
 import { api } from '../lib/api';
 import type { PlanEntry } from '../lib/types';
+import { clearTabTransition } from '../lib/tabTransition';
 import { riseIn, spring, stagger } from '../motion/springs';
 import { SHARED_MOTIF, SHARED_TITLE } from '../state/viewTransition';
 
@@ -80,7 +81,7 @@ export function PlanPage() {
     <div className="page--rows plan">
       <h1 className="page__title"><Icon name="calendar" size={22} /> {t('plan.title')}</h1>
 
-      <div className="row row--between" style={{ marginBottom: 'var(--space-4)' }}>
+      <div className="row row--between page-tools" style={{ marginBottom: 'var(--space-4)' }}>
         <IconButton label="‹" onClick={() => monday && setStart(addDays(monday, -7))}>‹</IconButton>
         <button className="muted" onClick={() => setStart(undefined)} style={{ font: 'var(--type-title)' }}>
           {monday && start === undefined ? t('plan.thisWeek') : monday ? strings.plan.weekOf(fmtDay(monday)) : '…'}
@@ -160,6 +161,7 @@ function PlanEntryRow({ entry, canShare, onRemove }: { entry: PlanEntry; canShar
     // Detail data must be cached BEFORE navigating: react-router snapshots the
     // destination synchronously, and a hero-less loading state kills the morph.
     await queryClient.ensureQueryData(queryOpts);
+    clearTabTransition(); // a detail morph must never inherit a tab slide
     navigate(`/rezept/${entry.recipe_id}`, { viewTransition: true });
   };
 

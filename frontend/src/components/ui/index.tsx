@@ -90,11 +90,12 @@ interface SegmentedProps<T extends string> {
   options: { value: T; label: ReactNode }[];
   value: T;
   onChange: (value: T) => void;
+  className?: string;
 }
 
-export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, className }: SegmentedProps<T>) {
   return (
-    <div className="seg" role="group">
+    <div className={className ? `seg ${className}` : 'seg'} role="group">
       {options.map((opt) => (
         <button
           key={opt.value}

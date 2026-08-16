@@ -39,7 +39,7 @@ export function HistoryPage() {
           placeholder={t('history.searchPlaceholder')}
           aria-label={t('history.searchPlaceholder')}
         />
-        <div className="chips">
+        <div className="chips page-tools">
           <Chip selected={mode === ''} onToggle={() => setMode('')}>{t('favorites.filterAll')}</Chip>
           <Chip selected={mode === 'kochen'} onToggle={() => setMode(mode === 'kochen' ? '' : 'kochen')}>
             <Icon name="pan" size={13} /> {t('wizard.modeKochen')}

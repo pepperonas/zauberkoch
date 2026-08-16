@@ -105,14 +105,83 @@ html.zk-theme-vt .page-tx__spacer {
 /* :not() also excludes the CRT login/logout transitions (crt.css drives those
    snapshots via WAAPI — this crossfade would fight the picture collapse). */
 html:not(.zk-theme-vt):not(.zk-crt-vt-off):not(.zk-crt-vt-on)::view-transition-new(root) { z-index: 2; }
-html:not(.zk-theme-vt):not(.zk-crt-vt-off):not(.zk-crt-vt-on)::view-transition-old(root) {
+html:not(.zk-theme-vt):not(.zk-crt-vt-off):not(.zk-crt-vt-on):not([data-tab-dir])::view-transition-old(root) {
   animation: zk-vt-fade-out 260ms cubic-bezier(0.4, 0, 1, 1) both;
 }
-html:not(.zk-theme-vt):not(.zk-crt-vt-off):not(.zk-crt-vt-on)::view-transition-new(root) {
+html:not(.zk-theme-vt):not(.zk-crt-vt-off):not(.zk-crt-vt-on):not([data-tab-dir])::view-transition-new(root) {
   animation: zk-vt-fade-in 220ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
 }
 @keyframes zk-vt-fade-out { to { opacity: 0; } }
 @keyframes zk-vt-fade-in { from { opacity: 0; } }
+
+/* ── Tab switches: direction-aware fade-through ───────────────────────────
+   The bottom nav has an order, and switching should feel like moving through
+   it: a tab further right slides the content in from the right, going back
+   mirrors it. The nav's onClick stamps `data-tab-dir` on <html> BEFORE
+   react-router snapshots the old page (lib/tabTransition.ts — same
+   pre-snapshot pattern as the theme toggle's data-theme), the shell retires
+   the stamp after the transition, and every card→detail entry point clears it
+   defensively — a leaked stamp would slide the container-transform morph.
+
+   MD3 fade-through with a spatial hint: modest travel (28px in, 20px out),
+   incoming on emphasized-decelerate, outgoing on accelerate. The root's
+   opacity-from-0 is the same battle-tested shape as the plain crossfade above
+   — the transform-only rule protects NAMED new-only sections from the mobile
+   URL-bar stall, not the root, which is the page itself. */
+html[data-tab-dir='fwd']::view-transition-old(root) {
+  animation: zk-vt-tab-out-fwd 240ms cubic-bezier(0.3, 0, 0.8, 0.15) both;
+}
+html[data-tab-dir='fwd']::view-transition-new(root) {
+  animation: zk-vt-tab-in-fwd 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+html[data-tab-dir='back']::view-transition-old(root) {
+  animation: zk-vt-tab-out-back 240ms cubic-bezier(0.3, 0, 0.8, 0.15) both;
+}
+html[data-tab-dir='back']::view-transition-new(root) {
+  animation: zk-vt-tab-in-back 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+@keyframes zk-vt-tab-out-fwd { to { opacity: 0; transform: translateX(-20px); } }
+@keyframes zk-vt-tab-in-fwd { from { opacity: 0; transform: translateX(28px); } }
+@keyframes zk-vt-tab-out-back { to { opacity: 0; transform: translateX(20px); } }
+@keyframes zk-vt-tab-in-back { from { opacity: 0; transform: translateX(-28px); } }
+
+/* What persists must not ride the slide — the separation between "travels"
+   and "stays" is what makes the movement read as navigation instead of a
+   page-wide wipe. All names below exist ONLY under the data-tab-dir stamp, so
+   the card→detail morph never pays for these extra layers (the reason only
+   the clicked card is ever named there).
+
+   The generation pill floats above the nav across every tab → held, like the
+   nav itself. */
+html[data-tab-dir] .genpill { view-transition-name: zk-genpill; }
+::view-transition-group(zk-genpill) { animation-duration: 0.001ms; }
+::view-transition-old(zk-genpill),
+::view-transition-new(zk-genpill) { animation: none; mix-blend-mode: normal; }
+
+/* Page titles are the tabs' anchor element. When both sides have one
+   (Favoriten↔Verlauf …) they PAIR: the default group morph crossfades the
+   text in place while the content slides beneath — a shared element between
+   tabs. When only one side has a title (wizard has none), :only-child picks
+   the unpaired case: enter rises transform-only (the URL-bar stall rule —
+   a stalled title must be offset, never invisible), exit sinks quickly. */
+html[data-tab-dir] .page__title { view-transition-name: zk-page-title; }
+::view-transition-new(zk-page-title):only-child {
+  animation: zk-vt-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+::view-transition-old(zk-page-title):only-child {
+  animation: zk-vt-sink 150ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* The tool row under the title (filter chips, list/recipe toggle, week
+   switcher). Paired across tabs it morphs as a persistent scaffold; unpaired
+   it cascades in just after the title. Same transform-only enter rule. */
+html[data-tab-dir] .page-tools { view-transition-name: zk-page-tools; }
+::view-transition-new(zk-page-tools):only-child {
+  animation: zk-vt-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) 70ms both;
+}
+::view-transition-old(zk-page-tools):only-child {
+  animation: zk-vt-sink 150ms cubic-bezier(0.4, 0, 1, 1) both;
+}
 
 /* Shared element morph — position + size, MD3 emphasized easing (~360 ms). */
 ::view-transition-group(zk-shared-motif),

@@ -8,6 +8,7 @@ import { useLocation, useNavigate, useViewTransitionState } from 'react-router-d
 import { t } from '../../i18n';
 import { api } from '../../lib/api';
 import type { RecipeListItem } from '../../lib/types';
+import { clearTabTransition } from '../../lib/tabTransition';
 import { riseIn, spring, stagger } from '../../motion/springs';
 import { SHARED_MOTIF, SHARED_TITLE } from '../../state/viewTransition';
 import { Icon } from '../icons';
@@ -44,6 +45,7 @@ export function RecipeCard({ item, index = 0 }: { item: RecipeListItem; index?: 
   // renders a hero-less loading state and the morph has no target.
   const open = async () => {
     await queryClient.ensureQueryData(queryOpts);
+    clearTabTransition(); // a detail morph must never inherit a tab slide
     navigate(`/rezept/${item.id}`, { viewTransition: true });
   };
 
