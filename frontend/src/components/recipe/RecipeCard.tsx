@@ -2,13 +2,14 @@
  * Root is a div (not button): the favorite star is its own nested button. */
 
 import { motion, useReducedMotion } from 'motion/react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useViewTransitionState } from 'react-router-dom';
 
 import { t } from '../../i18n';
 import { api } from '../../lib/api';
 import type { RecipeListItem } from '../../lib/types';
-import { clearTabTransition } from '../../lib/tabTransition';
+import { CARD_MORPH_CAP, clearTabTransition, TAB_DIR_TTL_MS } from '../../lib/tabTransition';
 import { riseIn, spring, stagger } from '../../motion/springs';
 import { SHARED_MOTIF, SHARED_TITLE } from '../../state/viewTransition';
 import { Icon } from '../icons';
@@ -35,6 +36,26 @@ export function RecipeCard({ item, index = 0 }: { item: RecipeListItem; index?: 
   // either side, so the list path is "transitioning" during forward + back.
   const listTransitioning = useViewTransitionState(location.pathname);
   const morphing = isSource || listTransitioning;
+
+  // Cross-tab card morph, NEW side. During a tab switch (data-tab-dir is
+  // stamped before react-router's synchronous view-transition render, so this
+  // read is deterministic) the first cards name themselves `zk-card-<id>` —
+  // pairing with the old page's identically named cards makes shared recipes
+  // fly to their new position (Favoriten ↔ Verlauf). The name must NOT
+  // outlive the transition: a later card→detail morph carrying eight named
+  // card layers is the documented mobile perf trap, so an effect strips the
+  // inline name once the stamp's lifetime is over.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const tabMorph =
+    index < CARD_MORPH_CAP && document.documentElement.dataset.tabDir != null;
+  useEffect(() => {
+    if (!tabMorph) return;
+    const timer = window.setTimeout(
+      () => rootRef.current?.style.removeProperty('view-transition-name'),
+      TAB_DIR_TTL_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [tabMorph]);
 
   const queryOpts = { queryKey: ['recipes', item.id], queryFn: () => api.recipe(item.id) };
   // Warm the detail query on press so the navigate below is usually instant.
@@ -69,7 +90,10 @@ export function RecipeCard({ item, index = 0 }: { item: RecipeListItem; index?: 
 
   return (
     <motion.div
+      ref={rootRef}
       className="card card--outlined recipecard"
+      data-card-id={item.id}
+      style={tabMorph ? { viewTransitionName: `zk-card-${item.id}` } : undefined}
       role="button"
       tabIndex={0}
       onPointerDown={prefetch}

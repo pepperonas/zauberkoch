@@ -148,3 +148,55 @@ test('reduced motion: tab switches still navigate, nothing lingers', async ({ pa
   await expect(page).toHaveURL(/\/einkauf$/);
   await expect.poll(() => stamp(page), { timeout: 2000 }).toBeNull();
 });
+
+test.describe('cross-tab card morphs', () => {
+  test('cards are named for the tab switch and stripped afterwards', async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/favoriten');
+    await expect(page.locator('.recipecard').first()).toBeVisible();
+
+    await page.getByRole('link', { name: 'Verlauf' }).click();
+
+    // the OLD-side naming happened in the click handler; on the new page the
+    // render-time naming applies while the stamp lives
+    await expect
+      .poll(async () =>
+        page.evaluate(
+          () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
+        ),
+      )
+      .toBeGreaterThan(0);
+
+    // and NOTHING may survive the stamp: a lingering name would ride into the
+    // next card→detail morph as an extra snapshot layer — the perf trap the
+    // "only the clicked card is named" rule exists for
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
+          ),
+        { timeout: 2500 },
+      )
+      .toBe(0);
+  });
+
+  test('a detail morph right after a tab switch carries zero card layers', async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/favoriten');
+    await expect(page.locator('.recipecard').first()).toBeVisible();
+
+    await page.getByRole('link', { name: 'Verlauf' }).click();
+    await page.waitForTimeout(150); // inside the stamp's lifetime
+    await page.locator('.recipecard').first().click();
+
+    // clearTabTransition() in open() runs synchronously before navigate:
+    // stamp gone, names gone — BEFORE the detail snapshot is taken
+    expect(await stamp(page)).toBeNull();
+    const named = await page.evaluate(
+      () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
+    );
+    expect(named).toBe(0);
+    await expect(page).toHaveURL(/\/rezept\/42$/);
+  });
+});
