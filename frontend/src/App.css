@@ -465,10 +465,12 @@
   /* A search field does not get better at 1120px. */
   input[type="search"].input { max-width: 480px; }
 
-  /* Row lists (shopping, weekly plan) opt OUT of the width. Each row carries
-     its action at the far right, so the extra space lands *inside* the row:
-     at 1120px the ✕ sits ~900px from the item it deletes, and a struck-through
-     line runs the full width of the window. Left-aligned rather than centred so
+  /* Row lists (shopping, and the weekly plan below 1240px) opt OUT of the
+     width. Each row carries its action at the far right, so the extra space
+     lands *inside* the row: at 1120px the ✕ sits ~900px from the item it
+     deletes, and a struck-through line runs the full width of the window.
+     The planner opts back in from 1240px, where it stops being rows at all
+     and becomes a seven-column week (pages/plan.css). Left-aligned rather than centred so
      the list keeps the shell's left edge, shared with the header and the page
      title. Verified by looking: the wide version was worse than the 720px one,
      which is why this exception exists at all. */

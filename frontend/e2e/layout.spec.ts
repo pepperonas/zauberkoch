@@ -16,6 +16,13 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+/* This file measures geometry, not motion. The day cards and recipe sections
+ * enter with a staggered spring, and reading a bounding box mid-flight yields
+ * the animated position, not the laid-out one — which showed up as one test
+ * passing alone and failing inside the full suite. Reduced motion skips the
+ * entrances outright, so every measurement here is of the settled layout. */
+test.use({ reducedMotion: 'reduce' });
+
 const ME = {
   authenticated: true,
   is_admin: false,
@@ -65,8 +72,30 @@ async function mockApi(page: Page) {
   );
   await page.route('**/api/v1/recipes?**', (route) => route.fulfill({ json: { items: [] } }));
   await page.route('**/api/v1/shopping', (route) => route.fulfill({ json: { items: [] } }));
-  await page.route('**/api/v1/plan**', (route) => route.fulfill({ json: { entries: [] } }));
+  await page.route('**/api/v1/plan**', (route) => route.fulfill({ json: PLAN_WEEK }));
 }
+
+/** Monday–Sunday with three dishes, one of them a long title that has to clamp. */
+const PLAN_WEEK = {
+  start: '2026-08-10',
+  days: ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14', '2026-08-15', '2026-08-16'].map(
+    (datum, i) => ({
+      datum,
+      entries:
+        i < 3
+          ? [{
+              id: 100 + i,
+              recipe_id: 42,
+              titel: i === 1 ? 'Thailändisches Massaman-Curry mit Rindfleisch' : `Gericht ${i}`,
+              kueche: 'Test',
+              mode: 'kochen' as const,
+              tags: [],
+              zeit_gesamt: 30,
+            }]
+          : [],
+    }),
+  ),
+};
 
 /** Characters per line of the widest wrapping paragraph in `selector`. */
 async function measure(page: Page, selector: string): Promise<number> {
@@ -167,5 +196,89 @@ test.describe('desktop', () => {
       );
       expect(overflows, `${path} scrolls sideways`).toBe(false);
     }
+  });
+});
+
+/* ── The weekly planner ───────────────────────────────────────────────────
+   A week view exists to show a week. Stacked as seven rows it ran 1716px at
+   1512px wide, so Sunday sat below the fold — the one thing the layout was
+   supposed to make visible was the thing you had to scroll for.
+
+   Its breakpoint is 1240px rather than the app's 1100px: seven columns need
+   roughly 150px each to hold a wrapped dish title, and below that they are
+   more cramped than the rows they replace. */
+
+test.describe('weekly planner', () => {
+  test('stays a stack of rows below 1240px', async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 1239, height: 900 });
+    await page.goto('/plan');
+    await expect(page.locator('.plan__day').first()).toBeVisible();
+
+    const boxes = await page.locator('.plan__day').evaluateAll((els) =>
+      els.map((e) => Math.round(e.getBoundingClientRect().y)),
+    );
+    expect(new Set(boxes).size).toBe(7); // seven distinct rows
+  });
+
+  test('shows all seven days side by side from 1240px', async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 1240, height: 900 });
+    await page.goto('/plan');
+    await expect(page.locator('.plan__day').first()).toBeVisible();
+
+    // Retried until the layout settles rather than measured once. `reducedMotion`
+    // is honoured only after `useReducedMotion()` has read the media query, so
+    // the first paint can still carry the staggered entrance offset — measuring
+    // into that window made this fail about half the time on a correct layout.
+    // Grid tracks also land on sub-pixel boundaries, hence a 2px tolerance
+    // instead of exact equality.
+    await expect(async () => {
+      const boxes = await page.locator('.plan__day').evaluateAll((els) =>
+        els.map((e) => e.getBoundingClientRect()).map((b) => ({ y: b.y, h: b.height })),
+      );
+      expect(boxes).toHaveLength(7);
+      const spread = (ns: number[]) => Math.max(...ns) - Math.min(...ns);
+      expect(spread(boxes.map((b) => b.y)), 'all seven share one row').toBeLessThan(2);
+      expect(spread(boxes.map((b) => b.h)), 'equal height, as a calendar has').toBeLessThan(2);
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('the whole week fits on one screen', async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 1512, height: 950 });
+    await page.goto('/plan');
+    await expect(page.locator('.plan__day').first()).toBeVisible();
+
+    await expect(async () => {
+      const sunday = (await page.locator('.plan__day').last().boundingBox())!;
+      expect(sunday.y + sunday.height).toBeLessThanOrEqual(950);
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('a clamped title keeps the full name reachable', async ({ page }) => {
+    // Three lines is all a 150px column gets, so the rest lives in the tooltip
+    // and in the accessible name — never nowhere.
+    await mockApi(page);
+    await page.setViewportSize({ width: 1512, height: 950 });
+    await page.goto('/plan');
+
+    const long = page.locator('.plan-entry__open').nth(1);
+    await expect(long).toHaveAttribute('title', 'Thailändisches Massaman-Curry mit Rindfleisch');
+    await expect(long).toHaveAttribute('aria-label', /Thailändisches Massaman-Curry mit Rindfleisch/);
+  });
+
+  test('the delete button stays inside its day card', async ({ page }) => {
+    // It is absolutely placed in the grid; a wrong offset would hang it over
+    // the neighbouring day.
+    await mockApi(page);
+    await page.setViewportSize({ width: 1240, height: 900 });
+    await page.goto('/plan');
+    await expect(page.locator('.plan__day').first()).toBeVisible();
+
+    const card = (await page.locator('.plan__day').first().boundingBox())!;
+    const remove = (await page.locator('.plan-entry__remove').first().boundingBox())!;
+    expect(remove.x + remove.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+    expect(remove.x).toBeGreaterThanOrEqual(card.x - 0.5);
   });
 });

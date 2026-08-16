@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/icons';
 import { motifForRecipe, RecipeMotif } from '../components/recipe/RecipeMotif';
 import '../components/recipe/recipe.css';
+import './plan.css';
 import { Button, IconButton } from '../components/ui';
 import { Sheet } from '../components/ui/Sheet';
 import { useSnackbar } from '../components/ui/Snackbar';
@@ -76,7 +77,7 @@ export function PlanPage() {
   };
 
   return (
-    <div className="page--rows">
+    <div className="page--rows plan">
       <h1 className="page__title"><Icon name="calendar" size={22} /> {t('plan.title')}</h1>
 
       <div className="row row--between" style={{ marginBottom: 'var(--space-4)' }}>
@@ -87,15 +88,15 @@ export function PlanPage() {
         <IconButton label="›" onClick={() => monday && setStart(addDays(monday, 7))}>›</IconButton>
       </div>
 
-      <div className="stack">
+      <div className="stack plan__week">
         {(week.data?.days ?? []).map((day, i) => (
           <motion.div
             key={day.datum}
-            className={`card card--outlined ${day.datum === today ? 'plan__today' : ''}`}
+            className={`card card--outlined plan__day ${day.datum === today ? 'plan__today' : ''}`}
             {...(reduced || listTransitioning ? {} : riseIn)}
             transition={stagger(i, 0.04)}
           >
-            <div className="row row--between">
+            <div className="row row--between plan__dayhead">
               <span style={{ font: 'var(--type-title)' }}>
                 {strings.plan.dayNames[i]}{' '}
                 <span className="muted" style={{ font: 'var(--type-label-sm)' }}>{fmtDay(day.datum)}</span>
@@ -136,7 +137,16 @@ export function PlanPage() {
 }
 
 /** One planned recipe: tapping motif/title opens the recipe with the
- * shared-element morph (tile → detail hero); delete stays a separate button. */
+ * shared-element morph (tile → detail hero); delete stays a separate button.
+ *
+ * `title` carries the full dish name: in the week grid the label clamps after
+ * three lines, and the tooltip is the only way a mouse user reads the rest
+ * (screen readers get it from aria-label).
+ *
+ * ⚠️ Do NOT annotate individual attributes with a `/* … *\/` comment between
+ * them. It type-checks, it builds without a warning — and the attribute that
+ * follows the comment silently disappears from the output. Cost an E2E failure
+ * to find; keep prose up here. */
 function PlanEntryRow({ entry, canShare, onRemove }: { entry: PlanEntry; canShare: boolean; onRemove: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -154,13 +164,13 @@ function PlanEntryRow({ entry, canShare, onRemove }: { entry: PlanEntry; canShar
   };
 
   return (
-    <div className="row row--between" style={{ minHeight: 56 }}>
+    <div className="row row--between plan-entry">
       <button
-        className="row"
-        style={{ minWidth: 0, flex: 1, textAlign: 'left', minHeight: 'var(--touch-target)' }}
+        className="row plan-entry__open"
         onPointerDown={() => void queryClient.prefetchQuery(queryOpts)}
         onClick={() => void open()}
         aria-label={`${entry.titel} — ${t('common.openRecipe')}`}
+        title={entry.titel}
       >
         <span className="motif-tile">
           <RecipeMotif
@@ -172,18 +182,15 @@ function PlanEntryRow({ entry, canShare, onRemove }: { entry: PlanEntry; canShar
           />
         </span>
         <span
-          style={{
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            viewTransitionName: isSource ? SHARED_TITLE : undefined,
-          }}
+          className="plan-entry__title"
+          style={{ viewTransitionName: isSource ? SHARED_TITLE : undefined }}
         >
           {entry.titel}
         </span>
       </button>
-      <IconButton label={t('common.delete')} onClick={onRemove}><Icon name="close" size={18} /></IconButton>
+      <span className="plan-entry__remove">
+        <IconButton label={t('common.delete')} onClick={onRemove}><Icon name="close" size={18} /></IconButton>
+      </span>
     </div>
   );
 }

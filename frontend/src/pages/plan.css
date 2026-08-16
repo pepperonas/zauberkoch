@@ -1,0 +1,100 @@
+/* Weekly planner.
+ *
+ * Phone and tablet: seven day cards stacked, one per row — the layout the app
+ * shipped with, unchanged.
+ *
+ * From 1240px the week becomes what a week actually is: seven columns, side by
+ * side, visible at once. That is the whole point of a week view, and it is the
+ * one thing the stacked list cannot do — at 1512px the stack ran 1716px, so
+ * Sunday was always below the fold.
+ *
+ * The breakpoint is deliberately higher than the app's 1100px one: seven
+ * columns need roughly 150px each to hold a wrapped dish title, and below
+ * ~1240px they get too cramped to be an improvement over the rows.
+ */
+
+/* ── Baseline (all widths) ─────────────────────────────────────────────── */
+
+.plan-entry {
+  min-height: 56px;
+}
+.plan-entry__open {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+  min-height: var(--touch-target);
+}
+.plan-entry__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── The week grid ─────────────────────────────────────────────────────── */
+
+@media (min-width: 1240px) {
+  /* The planner opts back INTO the width it gave up as a row list: as a grid
+     the action no longer sits at the far end of a wide row. */
+  .plan.page--rows > * { max-width: none; }
+
+  .plan__week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--space-3);
+    /* Equal-height columns, as a calendar has: ragged card bottoms (a two-line
+       title next to a three-line one) read as a glitch, and an empty day at
+       full height is a better invitation to fill it than a stub. */
+    align-items: stretch;
+  }
+
+  .plan__day {
+    padding: var(--space-3);
+    /* Enough to read as a day even when the whole week is empty. */
+    min-height: 132px;
+  }
+
+  .plan__dayhead {
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+
+  /* One planned dish inside a ~150px column. The row layout (tile · title · ✕)
+     would leave the title about 55px, so the entry stacks instead: tile and
+     delete on the first line, the title wrapping underneath. */
+  .plan__week .plan-entry {
+    position: relative;
+    min-height: 0;
+    padding-top: var(--space-1);
+  }
+  .plan__week .plan-entry__open {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    /* clear of the absolutely placed delete button */
+    padding-right: 40px;
+  }
+  .plan__week .plan-entry__title {
+    /* Truncating to one line would show "Thailändisches Massaman-…" and nothing
+       else; in a column the title may use three lines and then clamp. */
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font: var(--type-label);
+  }
+  .plan__week .plan-entry__remove {
+    position: absolute;
+    top: 0;
+    right: calc(var(--space-2) * -1);
+  }
+
+  /* Two dishes on one day need a visible seam once they are stacked. */
+  .plan__week .plan-entry + .plan-entry {
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--c-outline-variant);
+  }
+}

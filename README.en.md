@@ -5,7 +5,7 @@
 **Say what you feel like eating — the AI writes the recipe, and you watch it being written.**
 
 [![CI](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-638%20%2B%2021%20E2E-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-638%20%2B%2026%20E2E-2ea44f)](#tests)
 [![Coverage](https://img.shields.io/badge/Backend%20coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#quality--numbers)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
@@ -268,7 +268,7 @@ frontend/                ~16,500 lines of TS/TSX/CSS
   src/features/          wizard · recipe · cook-mode · favorites · shopping · plan · auth · share
   src/components/        icons (58 glyphs) · recipe (58 motifs) · colophon (particle field) · ui
   src/state/             generation (SSE store outside React) · theme · supportPrompt
-  e2e/                   21 Playwright tests
+  e2e/                   26 Playwright tests
 
 deploy/                  systemd unit · nginx vhost · deploy.sh · backup timer
 docs/                    DEPLOY · GOOGLE-OAUTH · MOTION · IOS-CHECKLIST · screenshots/
@@ -309,11 +309,11 @@ Google OAuth setup: [`docs/GOOGLE-OAUTH.md`](docs/GOOGLE-OAUTH.md) · deployment
 cd backend  && pytest                    # 434 tests
 cd backend  && pytest --cov=app          # 99 % statement coverage
 cd frontend && npm test                  # 204 tests (Vitest)
-cd frontend && npx playwright test       # 21 E2E tests (local)
+cd frontend && npx playwright test       # 26 E2E tests (local)
 ```
 
 **638 unit/integration tests run on every push** via
-[GitHub Actions](.github/workflows/ci.yml); the **21 Playwright tests run locally** (they need
+[GitHub Actions](.github/workflows/ci.yml); the **26 Playwright tests run locally** (they need
 a preview build and a browser). **No test ever calls the real Anthropic API.**
 
 Covered, among other things: auth (Google **and** email/password) including ID-token validation and the
@@ -338,7 +338,7 @@ reproduced for real — the test fails without the guard.
 |---|---|---|
 | Lighthouse (performance / a11y / best practices / SEO) | **99 / 100 / 100 / 100** | against production, 2026-07-11 |
 | Backend coverage (statements) | **99 %** | 2026-08-15 |
-| Tests | **434** backend · **204** frontend · **21** E2E | 2026-08-15 |
+| Tests | **434** backend · **204** frontend · **26** E2E | 2026-08-16 |
 | Cost per live generation | ~3–4 cents | Sonnet 5, measured |
 
 Non-negotiable when changing things: touch targets ≥ 48 px, a visible `:focus-visible`, contrast ≥ AA,
