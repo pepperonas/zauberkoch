@@ -1,4 +1,4 @@
-/** The three figures the colophon genie can form, as dot fields.
+/** The four figures the colophon genie can form, as dot fields.
  *
  * Technique borrowed from the Octocat field on celox.io: rasterize the shape
  * into an offscreen canvas, then sample the alpha channel on a jittered grid.
@@ -10,7 +10,7 @@
  * primitives than as one hand-written `d` attribute.
  */
 
-export type GenieShapeKey = 'github' | 'donate' | 'review';
+export type GenieShapeKey = 'github' | 'donate' | 'review' | 'share';
 
 /** Draws the figure in white, filling a `size`×`size` context. */
 type ShapeDraw = (ctx: CanvasRenderingContext2D, size: number) => void;
@@ -114,18 +114,54 @@ const drawStars: ShapeDraw = (ctx, size) => {
   }
 };
 
+/** Paper plane — the share card's figure, nose up and to the right.
+ *
+ * ONE dart with a V-notch cut into its tail, not two overlapping wings in a
+ * three-quarter view. Two attempts at the prettier 3/4 fold were tried on
+ * screen and both read as a shard: a crease is a LINE, and a line drawn in
+ * dots against a dot-filled body is not a line, it is a slightly thinner
+ * patch. The notch is a HOLE, and a hole survives being dissolved into dots —
+ * which is the only thing that matters here.
+ *
+ * The notch apex sits closer to the nose than either tail corner; that is what
+ * separates a dart from an arrowhead.
+ */
+const drawPlane: ShapeDraw = (ctx, size) => {
+  const u = size / 100;
+  ctx.save();
+  ctx.scale(u, u);
+
+  // Flat rather than steep: a tall dart hangs its tail down behind the cards
+  // and into the field's lower mask, where the tip simply dissolves. In flight
+  // a dart is a long, low shape anyway.
+  ctx.beginPath();
+  ctx.moveTo(94, 26);  // nose
+  ctx.lineTo(8, 34);   // upper tail corner
+  ctx.lineTo(44, 52);  // notch apex — the V bites back toward the nose
+  ctx.lineTo(22, 76);  // lower tail corner
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+};
+
 const DRAW: Record<GenieShapeKey, ShapeDraw> = {
   github: drawOctocat,
   donate: drawEspresso,
   review: drawStars,
+  share: drawPlane,
 };
 
 /** How wide the figure sits inside the field box (1 = full width). Stars are a
- *  wide, flat row; the cat is roughly square. */
+ *  wide, flat row; the cat is roughly square; the dart is long and low. */
 export const SHAPE_FILL: Record<GenieShapeKey, number> = {
   github: 0.78,
   donate: 0.78,
   review: 1.15,
+  // The smallest of the four, and deliberately so: a long diagonal reads much
+  // larger than its bounding box suggests. At the cat's 0.78 the dart spanned
+  // the whole field and its nose ran off the top edge (measured on screen).
+  share: 0.58,
 };
 
 const RES = 520;

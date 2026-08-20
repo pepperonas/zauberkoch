@@ -188,12 +188,16 @@ const ACCENT_SHARE: Record<GenieShapeKey, number> = {
   github: 0.08,
   donate: 0.3,
   review: 0.72,
+  // Enough teal to separate the dart from the espresso cup's warm plume, not
+  // so much that the fold stops reading — the fold is the whole silhouette.
+  share: 0.34,
 };
 
 const ACCENT_VAR: Record<GenieShapeKey, string> = {
   github: '--c-primary',
   donate: '--c-primary',
   review: '--icon-gold',
+  share: '--c-tertiary',
 };
 
 function readColor(name: string, fallback: string): string {
@@ -482,14 +486,15 @@ export function GenieField({ shape, origin }: Props) {
     const fx = w / 2;
     // Well above the card block: the figures belong in the open space over the
     // colophon (behind the "Überrasch mich" button on the wizard), where they
-    // have room and nothing to hide behind. The star row stays a touch lower
-    // than the others — it is flat and wide, and needs less headroom.
-    // The star row goes highest of the three: it is flat and wide, so it needs
-    // the least headroom. Measured, the "Überrasch mich" button's centre sits
-    // at 0.307 of the field: centring the row there hid the middle star behind
-    // it, so the row rides a little higher and the button nestles into its
-    // lower edge instead.
-    const fy = h * (shape === 'review' ? 0.262 : 0.4);
+    // have room and nothing to hide behind. The star row goes highest of the
+    // four: it is flat and wide, so it needs the least headroom. Measured, the
+    // "Überrasch mich" button's centre sits at 0.307 of the field — centring
+    // the row there hid the middle star behind it, so the row rides a little
+    // higher and the button nestles into its lower edge instead. The dart sits
+    // between the two: flatter than the cat, so it rides higher, but it has a
+    // body to show and does not want the star row's ceiling.
+    const FIGURE_Y: Partial<Record<GenieShapeKey, number>> = { review: 0.262, share: 0.33 };
+    const fy = h * ((shape && FIGURE_Y[shape]) ?? 0.4);
     const share = shape ? ACCENT_SHARE[shape] : 0;
     const maxDelay = hadFigure && shape ? MAX_DELAY_MORPH : MAX_DELAY_IN;
 

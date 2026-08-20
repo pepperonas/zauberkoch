@@ -1,5 +1,5 @@
-/** Footer colophon: three cards (open source · support · review) above the
- * legal line, with a small origin note between.
+/** Footer colophon: four cards (open source · support · review · share) above
+ * the legal line, with a small origin note between.
  *
  * Owns the genie hover state, because the effect needs one thing the cards
  * cannot supply on their own: where the plume starts. The emitter is the
@@ -18,6 +18,11 @@ import type { GenieShapeKey } from './colophon/genieShapes';
 // pointer that can hover actually hovers.
 const GenieField = lazy(() =>
   import('./colophon/GenieField').then((m) => ({ default: m.GenieField })),
+);
+// Same reasoning: the dialog carries the QR encoder behind it, and neither is
+// needed until someone actually wants to pass the app on.
+const ShareAppDialog = lazy(() =>
+  import('./ShareAppDialog').then((m) => ({ default: m.ShareAppDialog })),
 );
 
 const GITHUB_URL = 'https://github.com/pepperonas/zauberkoch';
@@ -42,6 +47,7 @@ export function Colophon() {
   // which one that was.
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const [armed, setArmed] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Arm as soon as the footer comes into view, not on hover: the field is a
   // lazy chunk and the silhouettes have to be rasterized, and doing both at
@@ -79,7 +85,8 @@ export function Colophon() {
     return () => io.disconnect();
   }, [arm, armed]);
 
-  const enter = useCallback((next: GenieShapeKey) => (e: React.PointerEvent<HTMLAnchorElement>) => {
+  // Typed on HTMLElement, not HTMLAnchorElement: the share card is a button.
+  const enter = useCallback((next: GenieShapeKey) => (e: React.PointerEvent<HTMLElement>) => {
     if (!canHover()) return;
     const mark = e.currentTarget.querySelector('.colophon__mark')?.getBoundingClientRect();
     if (!mark) return;
@@ -96,7 +103,18 @@ export function Colophon() {
   // retarget, and only leaving the colophon puts the genie away.
   const leave = useCallback(() => setShape(null), []);
 
-  const cards = [
+  // `href` opens a page, `onClick` opens the dialog — the card renders as a
+  // link or a button accordingly. A link that does not navigate would lie to
+  // the middle mouse button, to "open in new tab" and to screen readers.
+  const cards: {
+    key: GenieShapeKey;
+    href?: string;
+    onClick?: () => void;
+    className: string;
+    mark: React.ReactNode;
+    title: string;
+    body: string;
+  }[] = [
     {
       key: 'github' as const,
       href: GITHUB_URL,
@@ -123,6 +141,14 @@ export function Colophon() {
       title: t('colophon.reviewTitle'),
       body: t('colophon.reviewBody'),
     },
+    {
+      key: 'share' as const,
+      onClick: () => setShareOpen(true),
+      className: ' colophon__card--share',
+      mark: <span className="colophon__mark colophon__mark--share" aria-hidden><Icon name="share" size={20} /></span>,
+      title: t('colophon.shareTitle'),
+      body: t('colophon.shareBody'),
+    },
   ];
 
   return (
@@ -138,22 +164,45 @@ export function Colophon() {
         </Suspense>
       )}
 
-      {cards.map((c) => (
-        <a
-          key={c.key}
-          className={`colophon__card${c.className}`}
-          href={c.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onPointerEnter={enter(c.key)}
-        >
-          {c.mark}
-          <span className="colophon__text">
-            <strong>{c.title}</strong>
-            <span>{c.body}</span>
-          </span>
-        </a>
-      ))}
+      {cards.map((c) => {
+        const inner = (
+          <>
+            {c.mark}
+            <span className="colophon__text">
+              <strong>{c.title}</strong>
+              <span>{c.body}</span>
+            </span>
+          </>
+        );
+        return c.href ? (
+          <a
+            key={c.key}
+            className={`colophon__card${c.className}`}
+            href={c.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onPointerEnter={enter(c.key)}
+          >
+            {inner}
+          </a>
+        ) : (
+          <button
+            key={c.key}
+            type="button"
+            className={`colophon__card${c.className}`}
+            onClick={c.onClick}
+            onPointerEnter={enter(c.key)}
+          >
+            {inner}
+          </button>
+        );
+      })}
+
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareAppDialog open onClose={() => setShareOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

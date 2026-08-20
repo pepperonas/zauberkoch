@@ -270,10 +270,10 @@
   flex-wrap: wrap;
 }
 
-/* ── Colophon: open source · support · origin ─────────────────────────────
-   Two tappable cards above the legal line. Deliberately quiet by default
+/* ── Colophon: open source · support · review · share ─────────────────────
+   Four tappable cards above the legal line. Deliberately quiet by default
    (outlined, muted) and only warming up on hover/tap — a footer should invite,
-   not shout. Single column on phones, side by side from 520px. */
+   not shout. Single column on phones, 2×2 from 520px. */
 .colophon {
   position: relative; /* anchors the genie field */
   display: grid;
@@ -315,15 +315,20 @@
   background-color: color-mix(in srgb, var(--c-surface-container) 55%, transparent);
 }
 @media (min-width: 520px) {
+  /* Four cards fill a 2×2 grid exactly — which is also why the review card no
+     longer needs the full-width span it carried while there were three. */
   .colophon { grid-template-columns: 1fr 1fr; }
-  /* Three cards in a two-column grid: the third would sit half-width and
-     orphaned. Spanning it reads as a deliberate third row instead. */
-  .colophon__card--review { grid-column: 1 / -1; }
 }
 
 .colophon__card {
   position: relative; /* above the genie field */
   z-index: 1;
+  /* The share card is a <button> (it opens a dialog, it does not navigate) —
+     these four lines are what a button needs to look like the links beside it. */
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -361,9 +366,13 @@
 }
 
 /* gold on the neutral container: a rating star reads instantly, and it keeps
-   all three marks distinguishable (dark octocat, green heart, gold star) */
+   all four marks distinguishable (dark octocat, green heart, gold star,
+   tertiary plane) */
 .colophon__mark--star {
   color: var(--icon-gold);
+}
+.colophon__mark--share {
+  color: var(--c-tertiary);
 }
 
 .colophon__text {

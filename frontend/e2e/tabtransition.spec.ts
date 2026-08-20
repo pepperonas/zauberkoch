@@ -68,14 +68,39 @@ async function mockApi(page: Page) {
 
 const stamp = (page: Page) => page.evaluate(() => document.documentElement.dataset.tabDir ?? null);
 
+/** Record every value `data-tab-dir` ever takes, from before the click.
+ *
+ * Reading the attribute back after `.click()` resolves is a RACE, and it bit:
+ * the stamp is deliberately short-lived (TAB_DIR_TTL_MS = 650 ms), and on a
+ * loaded machine the extra round-trip can land after the shell has already
+ * retired it — the assertion then sees null for a perfectly correct stamp.
+ * Two of these flaked. An observer installed beforehand cannot miss it, and it
+ * also closes the opposite hole: a WRONGLY set stamp that the TTL cleans up
+ * before the read would otherwise pass as "no stamp".
+ */
+async function recordStamps(page: Page) {
+  await page.evaluate(() => {
+    const log: (string | null)[] = [];
+    (window as unknown as { __stamps: (string | null)[] }).__stamps = log;
+    const el = document.documentElement;
+    new MutationObserver(() => log.push(el.dataset.tabDir ?? null)).observe(el, {
+      attributes: true,
+      attributeFilter: ['data-tab-dir'],
+    });
+  });
+}
+const stamps = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __stamps: (string | null)[] }).__stamps);
+
 test('a forward tab switch stamps fwd and retires the stamp', async ({ page }) => {
   await mockApi(page);
   await page.goto('/verlauf');
   await expect(page.locator('.page__title').locator('visible=true')).toBeVisible();
+  await recordStamps(page);
 
   await page.getByRole('link', { name: 'Einkauf' }).click();
 
-  expect(await stamp(page)).toBe('fwd');
+  expect(await stamps(page)).toContain('fwd');
   await expect.poll(() => stamp(page), { timeout: 2000 }).toBeNull();
   await expect(page).toHaveURL(/\/einkauf$/);
 });
@@ -84,19 +109,25 @@ test('a backward tab switch stamps back', async ({ page }) => {
   await mockApi(page);
   await page.goto('/plan');
   await expect(page.locator('.page__title').locator('visible=true')).toBeVisible();
+  await recordStamps(page);
 
   await page.getByRole('link', { name: 'Favoriten' }).click();
 
-  expect(await stamp(page)).toBe('back');
+  expect(await stamps(page)).toContain('back');
 });
 
 test('re-clicking the active tab leaves no stamp', async ({ page }) => {
   await mockApi(page);
   await page.goto('/verlauf');
   await expect(page.locator('.page__title').locator('visible=true')).toBeVisible();
+  await recordStamps(page);
 
   await page.getByRole('link', { name: 'Verlauf' }).click();
 
+  // Not "is null now" — that is also true 650 ms after a wrong stamp. Nothing
+  // may have been stamped at any point.
+  expect(await stamps(page)).not.toContain('fwd');
+  expect(await stamps(page)).not.toContain('back');
   expect(await stamp(page)).toBeNull();
 });
 
@@ -106,10 +137,15 @@ test('a card click right after a tab switch clears the stamp before the morph', 
   await mockApi(page);
   await page.goto('/verlauf');
   await expect(page.locator('.recipecard').first()).toBeVisible();
+  await recordStamps(page);
 
   await page.getByRole('link', { name: 'Favoriten' }).click();
   await page.locator('.recipecard').first().click();
 
+  // The recorder proves we really were inside the dangerous window (a stamp
+  // was set), so "null now" means the card click cleared it — not that the
+  // tab click never stamped in the first place.
+  expect(await stamps(page)).toContain('back');
   expect(await stamp(page)).toBeNull();
   await expect(page).toHaveURL(/\/rezept\/42$/);
 });
@@ -150,35 +186,50 @@ test('reduced motion: tab switches still navigate, nothing lingers', async ({ pa
 });
 
 test.describe('cross-tab card morphs', () => {
+  /** Log every card that ever carries a view-transition-name.
+   *
+   *  Polling for "some card is named right now" is a race with a ~650 ms
+   *  window and it lost under load: the first poll can land after the names
+   *  are already stripped, and then it never sees them. An observer installed
+   *  before the click records the fact instead of trying to catch it. */
+  async function recordNamedCards(page: Page) {
+    await page.evaluate(() => {
+      const seen = new Set<string>();
+      (window as unknown as { __named: Set<string> }).__named = seen;
+      const scan = () => {
+        for (const n of document.querySelectorAll<HTMLElement>('.recipecard'))
+          if (n.style.viewTransitionName) seen.add(n.style.viewTransitionName);
+      };
+      // childList too: the incoming page's cards are NEW elements that arrive
+      // with the name already on them, which is not an attribute mutation.
+      new MutationObserver(scan).observe(document.body, {
+        subtree: true, childList: true, attributes: true, attributeFilter: ['style'],
+      });
+    });
+  }
+  const namedCards = (page: Page) =>
+    page.evaluate(() => [...(window as unknown as { __named: Set<string> }).__named]);
+  const namedNow = (page: Page) =>
+    page.evaluate(
+      () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
+    );
+
   test('cards are named for the tab switch and stripped afterwards', async ({ page }) => {
     await mockApi(page);
     await page.goto('/favoriten');
     await expect(page.locator('.recipecard').first()).toBeVisible();
+    await recordNamedCards(page);
 
     await page.getByRole('link', { name: 'Verlauf' }).click();
 
-    // the OLD-side naming happened in the click handler; on the new page the
-    // render-time naming applies while the stamp lives
-    await expect
-      .poll(async () =>
-        page.evaluate(
-          () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
-        ),
-      )
-      .toBeGreaterThan(0);
+    // Both sides name the same recipe — that pairing IS the morph.
+    expect(await namedCards(page)).toContain('zk-card-42');
 
-    // and NOTHING may survive the stamp: a lingering name would ride into the
+    // And NOTHING may survive the stamp: a lingering name would ride into the
     // next card→detail morph as an extra snapshot layer — the perf trap the
-    // "only the clicked card is named" rule exists for
-    await expect
-      .poll(
-        async () =>
-          page.evaluate(
-            () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
-          ),
-        { timeout: 2500 },
-      )
-      .toBe(0);
+    // "only the clicked card is named" rule exists for. Settling to zero is
+    // monotone, so polling for it is safe.
+    await expect.poll(() => namedNow(page), { timeout: 2500 }).toBe(0);
   });
 
   test('a detail morph right after a tab switch carries zero card layers', async ({ page }) => {
@@ -186,17 +237,34 @@ test.describe('cross-tab card morphs', () => {
     await page.goto('/favoriten');
     await expect(page.locator('.recipecard').first()).toBeVisible();
 
+    // Snapshot the named elements AT the moment the browser takes the view
+    // transition snapshot — checking afterwards would be near-vacuous, because
+    // by then the list has unmounted and there are no cards left to be named.
+    await page.evaluate(() => {
+      const w = window as unknown as { __vtNames: string[][]; };
+      w.__vtNames = [];
+      const doc = document as unknown as { startViewTransition?: (cb: () => unknown) => unknown };
+      const orig = doc.startViewTransition?.bind(document);
+      if (!orig) return;
+      doc.startViewTransition = (cb: () => unknown) => {
+        w.__vtNames.push(
+          [...document.querySelectorAll<HTMLElement>('[style*="view-transition-name"]')]
+            .map((n) => n.style.viewTransitionName)
+            .filter(Boolean),
+        );
+        return orig(cb);
+      };
+    });
+
     await page.getByRole('link', { name: 'Verlauf' }).click();
     await page.waitForTimeout(150); // inside the stamp's lifetime
     await page.locator('.recipecard').first().click();
-
-    // clearTabTransition() in open() runs synchronously before navigate:
-    // stamp gone, names gone — BEFORE the detail snapshot is taken
-    expect(await stamp(page)).toBeNull();
-    const named = await page.evaluate(
-      () => [...document.querySelectorAll('.recipecard')].filter((n) => (n as HTMLElement).style.viewTransitionName).length,
-    );
-    expect(named).toBe(0);
     await expect(page).toHaveURL(/\/rezept\/42$/);
+
+    const runs = await page.evaluate(() => (window as unknown as { __vtNames: string[][] }).__vtNames);
+    const detail = runs.at(-1) ?? [];
+    // The detail morph names exactly the hero pair — no inherited card layers.
+    expect(detail.filter((n) => n.startsWith('zk-card-'))).toEqual([]);
+    expect(detail).toContain('zk-shared-motif');
   });
 });

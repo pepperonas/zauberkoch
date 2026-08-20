@@ -1,7 +1,7 @@
 /** Profile & preferences: persistent diet flags, no-go ingredients,
  * default servings — merged into every generation server-side. */
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 
 import { strings, t } from '../i18n';
 import { api, ApiRequestError } from '../lib/api';
@@ -14,6 +14,11 @@ import { Sheet } from './ui/Sheet';
 import { ZutatInput } from './ui/ZutatInput';
 import { useSnackbar } from './ui/Snackbar';
 import '../pages/wizard.css';
+
+// Carries the QR encoder behind it — loaded only when someone wants to share.
+const ShareAppDialog = lazy(() =>
+  import('./ShareAppDialog').then((m) => ({ default: m.ShareAppDialog })),
+);
 
 interface Props {
   open: boolean;
@@ -35,6 +40,7 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
   const [keyInput, setKeyInput] = useState('');
   const [keyBusy, setKeyBusy] = useState(false);
   const [keyError, setKeyError] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Seed the form ONCE per opening. Re-seeding on every `me` change looked
   // harmless until saving an API key called refreshMe() — the fresh `me` then
@@ -226,6 +232,12 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
         </div>
 
         <Button onClick={() => void save()}>{t('common.save')}</Button>
+        {/* Sits between saving and leaving on purpose: it is the one action here
+            that is neither a setting nor an account operation, and this is where
+            the eye already is after the preferences. */}
+        <Button variant="text" onClick={() => setShareOpen(true)}>
+          <Icon name="share" size={18} /> {t('shareApp.open')}
+        </Button>
         <Button variant="text" onClick={() => void logout()}><Icon name="power" size={18} /> {t('auth.logout')}</Button>
 
         <div className="profile__data stack">
@@ -286,6 +298,12 @@ export function ProfileSheet({ open, onClose, onLogout }: Props) {
           </Button>
         </div>
       </div>
+
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareAppDialog open onClose={() => setShareOpen(false)} />
+        </Suspense>
+      )}
 
       <Dialog
         open={confirmDelete}

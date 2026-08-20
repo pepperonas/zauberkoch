@@ -141,6 +141,12 @@
   left: 50%;
   top: 50%;
   width: min(92vw, 420px);
+  /* A dialog taller than the viewport is unusable — it centres on the middle
+     and both ends are off-screen with no way to reach them. Scroll inside
+     instead; costs nothing for the short ones. */
+  max-height: 88dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--c-surface-container-high);
   border-radius: var(--shape-xl);
   padding: var(--space-6);
