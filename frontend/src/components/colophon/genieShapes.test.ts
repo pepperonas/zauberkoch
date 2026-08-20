@@ -25,12 +25,13 @@ describe('genie shapes', () => {
     expect(SHAPE_FILL.review).toBeGreaterThan(SHAPE_FILL.github);
   });
 
-  it('keeps the paper plane the smallest figure', () => {
-    // Counter-intuitive but measured on screen: a long diagonal reads much
-    // larger than its bounding box, and at the octocat's fill factor the dart
-    // spanned the whole field with its nose off the top edge. The pin exists
-    // because "make it as big as the others" is exactly the wrong instinct here.
+  it('keeps the share glyph just under the tall figures', () => {
+    // Measured ink heights at 1280px: cat 307, cup 301, glyph 267. Close
+    // enough to read as one family — but not equal, because the glyph's lowest
+    // node is a solid blob where the cat has trailing legs, and at full size it
+    // lands on the card row as a second, competing mark.
     expect(SHAPE_FILL.share).toBeLessThan(SHAPE_FILL.github);
+    expect(SHAPE_FILL.share).toBeGreaterThan(SHAPE_FILL.github * 0.7);
   });
 
   it('returns no points instead of throwing without a 2D context', () => {

@@ -490,10 +490,10 @@ export function GenieField({ shape, origin }: Props) {
     // four: it is flat and wide, so it needs the least headroom. Measured, the
     // "Überrasch mich" button's centre sits at 0.307 of the field — centring
     // the row there hid the middle star behind it, so the row rides a little
-    // higher and the button nestles into its lower edge instead. The dart sits
-    // between the two: flatter than the cat, so it rides higher, but it has a
-    // body to show and does not want the star row's ceiling.
-    const FIGURE_Y: Partial<Record<GenieShapeKey, number>> = { review: 0.262, share: 0.33 };
+    // higher and the button nestles into its lower edge instead. The share
+    // glyph is as tall as it is wide, so it rides a little above the cat's
+    // line to keep its lower node clear of the cards.
+    const FIGURE_Y: Partial<Record<GenieShapeKey, number>> = { review: 0.262, share: 0.38 };
     const fy = h * ((shape && FIGURE_Y[shape]) ?? 0.4);
     const share = shape ? ACCENT_SHARE[shape] : 0;
     const maxDelay = hadFigure && shape ? MAX_DELAY_MORPH : MAX_DELAY_IN;

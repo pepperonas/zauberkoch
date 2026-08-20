@@ -114,33 +114,50 @@ const drawStars: ShapeDraw = (ctx, size) => {
   }
 };
 
-/** Paper plane — the share card's figure, nose up and to the right.
+/** The share glyph itself — three nodes, two links.
  *
- * ONE dart with a V-notch cut into its tail, not two overlapping wings in a
- * three-quarter view. Two attempts at the prettier 3/4 fold were tried on
- * screen and both read as a shard: a crease is a LINE, and a line drawn in
- * dots against a dot-filled body is not a line, it is a slightly thinner
- * patch. The notch is a HOLE, and a hole survives being dissolved into dots —
- * which is the only thing that matters here.
+ * The figure IS the card's icon here, the way the octocat and the star row are
+ * their cards' icons: hovering should feel like the mark growing out of its
+ * tile, not like a second, unrelated picture. (The espresso cup is the one
+ * deliberate exception — it illustrates the *offer*, not the heart.)
  *
- * The notch apex sits closer to the nose than either tail corner; that is what
- * separates a dart from an arrowhead.
+ * It also happens to be the right kind of shape for a dot field: the empty
+ * space between the nodes is a HOLE, and holes survive being dissolved into
+ * dots. A paper plane shipped here first and was replaced — its fold is a
+ * LINE, and a line of dots on a dot-filled body is not a line, it is a
+ * slightly thinner patch. Two attempts at it both read as a shard.
+ *
+ * Geometry follows `glyphs.tsx`' share icon: nodes at 1/8 of the box radius,
+ * top-right, middle-left, bottom-right.
  */
-const drawPlane: ShapeDraw = (ctx, size) => {
+const drawShareGlyph: ShapeDraw = (ctx, size) => {
   const u = size / 100;
   ctx.save();
   ctx.scale(u, u);
 
-  // Flat rather than steep: a tall dart hangs its tail down behind the cards
-  // and into the field's lower mask, where the tip simply dissolves. In flight
-  // a dart is a long, low shape anyway.
+  const R = 13;
+  const nodes = [
+    { x: 76, y: 22 }, // top right
+    { x: 24, y: 50 }, // middle left — the hub
+    { x: 76, y: 78 }, // bottom right
+  ];
+
+  // Links first, so the nodes sit on top of them cleanly. Thick enough to hold
+  // several rows of dots: a one-dot-wide line reads as a gap with noise in it.
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'butt';
   ctx.beginPath();
-  ctx.moveTo(94, 26);  // nose
-  ctx.lineTo(8, 34);   // upper tail corner
-  ctx.lineTo(44, 52);  // notch apex — the V bites back toward the nose
-  ctx.lineTo(22, 76);  // lower tail corner
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(nodes[1].x, nodes[1].y);
+  ctx.lineTo(nodes[0].x, nodes[0].y);
+  ctx.moveTo(nodes[1].x, nodes[1].y);
+  ctx.lineTo(nodes[2].x, nodes[2].y);
+  ctx.stroke();
+
+  for (const n of nodes) {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, R, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 };
@@ -149,7 +166,7 @@ const DRAW: Record<GenieShapeKey, ShapeDraw> = {
   github: drawOctocat,
   donate: drawEspresso,
   review: drawStars,
-  share: drawPlane,
+  share: drawShareGlyph,
 };
 
 /** How wide the figure sits inside the field box (1 = full width). Stars are a
@@ -158,10 +175,11 @@ export const SHAPE_FILL: Record<GenieShapeKey, number> = {
   github: 0.78,
   donate: 0.78,
   review: 1.15,
-  // The smallest of the four, and deliberately so: a long diagonal reads much
-  // larger than its bounding box suggests. At the cat's 0.78 the dart spanned
-  // the whole field and its nose ran off the top edge (measured on screen).
-  share: 0.58,
+  // A shade under the cat and the cup (0.78). Measured ink heights at 1280px:
+  // cat 307, cup 301, glyph 267 — close enough to read as one family, but the
+  // glyph's lowest node is a solid blob rather than the cat's trailing legs,
+  // and at full size it lands on the card row as a second, competing mark.
+  share: 0.62,
 };
 
 const RES = 520;
