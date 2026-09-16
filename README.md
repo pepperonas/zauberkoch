@@ -1,11 +1,15 @@
 <div align="center">
 
+<a href="https://zauberkoch.de">
+  <img src="docs/hero.png" alt="Zauberkoch — leuchtender Kochtopf, aus dem Gemüse und grüner Dampf aufsteigen" width="820">
+</a>
+
 # Zauberkoch 🧑‍🍳🍸
 
 **Sag, worauf du Lust hast — die KI schreibt das Rezept, und du siehst ihm beim Entstehen zu.**
 
 [![CI](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-659%20%2B%2042%20E2E-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-661%20%2B%2042%20E2E-2ea44f)](#tests)
 [![llms.txt](https://img.shields.io/badge/llms.txt-vorhanden-2ea44f)](https://zauberkoch.de/llms.txt)
 [![Coverage](https://img.shields.io/badge/Backend--Coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#qualität--messwerte)
@@ -380,7 +384,7 @@ Rezepttitel mit Markup kommt als Text an, nicht als Tag (per Mutationsprobe bele
 |---|---|---|
 | Lighthouse (Performance / A11y / Best Practices / SEO) | **99 / 100 / 100 / 100** | gegen Produktion, 2026-07-11 |
 | Backend-Coverage (Statements) | **99 %** | 2026-08-15 |
-| Tests | **437** Backend · **222** Frontend · **42** E2E | 2026-09-16 |
+| Tests | **439** Backend · **222** Frontend · **42** E2E | 2026-09-16 |
 | Kosten je Live-Generierung | ~3–4 ct | Sonnet 5, gemessen |
 
 | Sicherheits-Kopfzeilen auf jeder Seite | **6 / 6** | gemessen 2026-09-16 |

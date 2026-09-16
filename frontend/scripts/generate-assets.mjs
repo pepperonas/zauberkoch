@@ -167,8 +167,15 @@ await page.setViewportSize({ width: 1200, height: 630 });
 await page.setContent(ogHTML(), { waitUntil: 'load' });
 await page.evaluate(() => document.fonts.ready);
 const og = await page.screenshot({ clip: { x: 0, y: 0, width: 1200, height: 630 } });
-writeFileSync(out('og-v2.png'), og);
+// ⚠️ Die Wurzel-OG-Karte wird NICHT mehr hier erzeugt.
+// Seit 2026-09-16 ist /og-v3.png ein gestaltetes Bild (Topf-Motiv mit
+// Wortmarke und Funktionen), kein aus dem Logo gerendertes Blatt. Ein
+// writeFileSync() an dieser Stelle wuerde es beim naechsten
+// `npm run gen:assets` stillschweigend ueberbuegeln.
+// Neue Karte = neue Versionsnummer (og-vN.png) + index.html nachziehen:
+// Facebook und LinkedIn cachen Vorschaubilder hartnaeckig.
+void og;
 
 await browser.close();
 console.log('✔ Brand assets written to public/: icon.svg, favicon.ico, favicon-16/32.png,');
-console.log('  apple-touch-icon.png, icon-192/512.png, icon-maskable-512.png, og-v2.png');
+console.log('  apple-touch-icon.png, icon-192/512.png, icon-maskable-512.png (og-vN.png: handgepflegt)');

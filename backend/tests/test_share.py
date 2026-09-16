@@ -275,6 +275,51 @@ def test_llms_txt_and_robots_are_real_files(client):  # noqa: F811
         assert f"Disallow: {gated}" in robots
 
 
+def test_share_page_keeps_its_own_og_image_not_the_landing_card(
+    client, logged_in, mock_ai, monkeypatch, tmp_path
+):  # noqa: F811
+    """The landing card (og-vN.png) shows the app; a shared recipe must show the
+    RECIPE. Both live in the same shell, so the only thing keeping them apart is
+    that share.py strips the root-meta block — a regression there would put the
+    app poster on every shared dish."""
+    from app.api.v1 import share as share_module
+
+    shell = tmp_path / "index.html"
+    shell.write_text(
+        "<!doctype html><html><head><title>Zauberkoch</title>"
+        "<!-- zk:root-meta:start -->"
+        '<meta property="og:image" content="https://zauberkoch.de/og-v3.png">'
+        '<meta name="twitter:image" content="https://zauberkoch.de/og-v3.png">'
+        "<!-- zk:root-meta:end -->"
+        "</head><body></body></html>",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(share_module, "WEBROOT_INDEX", shell)
+
+    _, share = _shared_recipe(client, logged_in)
+    body = client.get(f"/r/{share['share_token']}").text
+
+    assert "og-v3.png" not in body  # the landing card never reaches a recipe page
+    assert f"/api/v1/share/{share['share_token']}/og.png" in body  # its own, per recipe
+    assert body.count("og:image\"") == 1  # exactly one, not both
+
+
+def test_landing_shell_points_at_the_versioned_card(client):  # noqa: F811
+    """A new card needs a NEW filename — social platforms cache previews hard, so
+    overwriting og-vN.png in place leaves the old picture in circulation."""
+    root = pathlib.Path(__file__).resolve().parents[2] / "frontend"
+    shell = (root / "index.html").read_text(encoding="utf-8")
+    import re
+
+    cards = set(re.findall(r"/(og-v\d+\.png)", shell))
+    assert len(cards) == 1, f"shell references more than one card: {cards}"
+    card = cards.pop()
+    assert (root / "public" / card).exists(), f"{card} referenced but not in public/"
+    # and the generator must not claim that file any more
+    gen = (root / "scripts" / "generate-assets.mjs").read_text(encoding="utf-8")
+    assert "writeFileSync(out('og-" not in gen
+
+
 # ---- shopping clear-all + replace (undo base) --------------------------------
 
 def test_shopping_clear_all_and_replace_restores(client, logged_in, mock_ai):  # noqa: F811
