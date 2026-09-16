@@ -5,7 +5,8 @@
 **Sag, worauf du Lust hast — die KI schreibt das Rezept, und du siehst ihm beim Entstehen zu.**
 
 [![CI](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-647%20%2B%2035%20E2E-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-659%20%2B%2042%20E2E-2ea44f)](#tests)
+[![llms.txt](https://img.shields.io/badge/llms.txt-vorhanden-2ea44f)](https://zauberkoch.de/llms.txt)
 [![Coverage](https://img.shields.io/badge/Backend--Coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#qualität--messwerte)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
@@ -63,6 +64,7 @@ Das Projekt ist ein Hobby-Projekt und komplett Open Source — Prompts, Kostenmo
 - [Projektstruktur](#projektstruktur)
 - [Lokales Setup](#lokales-setup)
 - [Tests](#tests)
+- [Für KI-Agenten](#für-ki-agenten)
 - [Qualität & Messwerte](#qualität--messwerte)
 - [Deployment](#deployment)
 - [Doku-Wegweiser](#doku-wegweiser)
@@ -344,14 +346,44 @@ einzeln, statt auf `ON DELETE CASCADE` zu vertrauen (SQLite erzwingt Fremdschlü
 einen Schlüssel im Klartext enthalten. Und das Rennen „Konto wird gelöscht, während eine Generierung
 läuft" wird echt nachgestellt — der Test schlägt ohne den Guard fehl.
 
+## Für KI-Agenten
+
+Zauberkoch ist eine Single-Page-App: das sichtbare HTML entsteht sonst erst im Browser.
+Ein Agent, der kein JavaScript ausführt, bekam auf jeder Seite **null Zeichen Text** —
+nur die Meta-Description. Das ist behoben, und zwar so, dass jede Seite das ausliefert,
+wonach gefragt wurde:
+
+| Was ein Client ohne JavaScript bekommt | vorher | jetzt |
+|---|---|---|
+| Startseite `/` | 0 Zeichen | **1.404 Zeichen** — Funktionsumfang in Prosa, Weiterlesen-Links |
+| Geteiltes Rezept `/r/<token>` | 0 Zeichen | **1.910 Zeichen** — das Rezept: Zutaten, alle Schritte, Tipps |
+| `/llms.txt` | 404 (als SPA-Fallback getarnt) | **`text/plain`**, echte Datei |
+
+- **[`/llms.txt`](https://zauberkoch.de/llms.txt)** fasst die Seite maschinenlesbar zusammen:
+  was öffentlich ist, wo es liegt, und was bewusst nicht abgerufen werden soll.
+- **Geteilte Rezepte tragen ihr Rezept zweifach im HTML** — als vollständiges
+  schema.org-`Recipe`-JSON-LD (Zutaten mit Mengen, alle Schritte, Zeiten, Portionen,
+  Nährwerte) *und* als lesbare Prosa im `<noscript>`. Der Server setzt dort den
+  App-Text der Startseite durch das tatsächliche Rezept — sonst beantwortete die Seite
+  „was ist dieses Rezept" mit „das kann die App".
+- **[`robots.txt`](https://zauberkoch.de/robots.txt)** sperrt die angemeldeten Routen
+  (sie geben ohne Sitzung nur die leere Hülle zurück) und `/api/` — **jede Generierung
+  kostet echte Modell-Tokens** und ist pro IP und pro Tag gedeckelt. Der Endpunkt ist
+  kein Wissens-API.
+
+Alles, was im `<noscript>` landet, ist model-erzeugter Text und wird escaped; ein
+Rezepttitel mit Markup kommt als Text an, nicht als Tag (per Mutationsprobe belegt).
+
 ## Qualität & Messwerte
 
 | Messung | Wert | Stand |
 |---|---|---|
 | Lighthouse (Performance / A11y / Best Practices / SEO) | **99 / 100 / 100 / 100** | gegen Produktion, 2026-07-11 |
 | Backend-Coverage (Statements) | **99 %** | 2026-08-15 |
-| Tests | **434** Backend · **213** Frontend · **35** E2E | 2026-08-16 |
+| Tests | **437** Backend · **222** Frontend · **42** E2E | 2026-09-16 |
 | Kosten je Live-Generierung | ~3–4 ct | Sonnet 5, gemessen |
+
+| Sicherheits-Kopfzeilen auf jeder Seite | **6 / 6** | gemessen 2026-09-16 |
 
 Nicht verhandelbar bei Änderungen: Touch-Targets ≥ 48 px, sichtbarer `:focus-visible`, Kontrast ≥ AA,
 `prefers-reduced-motion` auf jeder Animation, keine hartcodierten UI-Strings, keine Hex-Werte in

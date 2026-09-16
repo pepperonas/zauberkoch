@@ -5,7 +5,8 @@
 **Say what you feel like eating — the AI writes the recipe, and you watch it being written.**
 
 [![CI](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperonas/zauberkoch/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-647%20%2B%2035%20E2E-2ea44f)](#tests)
+[![Tests](https://img.shields.io/badge/Tests-659%20%2B%2042%20E2E-2ea44f)](#tests)
+[![llms.txt](https://img.shields.io/badge/llms.txt-present-2ea44f)](https://zauberkoch.de/llms.txt)
 [![Coverage](https://img.shields.io/badge/Backend%20coverage-99%25-2ea44f)](#tests)
 [![Lighthouse](https://img.shields.io/badge/Lighthouse-99%20%C2%B7%20100%20%C2%B7%20100%20%C2%B7%20100-2ea44f)](#quality--numbers)
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzauberkoch.de&up_message=online&down_message=offline&label=zauberkoch.de)](https://zauberkoch.de)
@@ -63,6 +64,7 @@ source — prompts, cost model and limits included.
 - [Project layout](#project-layout)
 - [Quickstart](#quickstart)
 - [Tests](#tests)
+- [For AI agents](#for-ai-agents)
 - [Quality & numbers](#quality--numbers)
 - [Deployment](#deployment)
 - [Documentation map](#documentation-map)
@@ -332,13 +334,42 @@ individually instead of trusting `ON DELETE CASCADE` (SQLite only enforces forei
 ever contains a key in plaintext. And the race "account deleted while a generation is in flight" is
 reproduced for real — the test fails without the guard.
 
+## For AI agents
+
+Zauberkoch is a single-page app, so the visible HTML would otherwise only exist
+after the browser runs JavaScript. An agent that does not run it got **zero
+characters of text** on every page — the meta description and nothing else. That
+is fixed, and fixed so that each page serves what was actually asked for:
+
+| What a client without JavaScript gets | before | now |
+|---|---|---|
+| Landing page `/` | 0 characters | **1,404 characters** — what the app does, in prose, with onward links |
+| Shared recipe `/r/<token>` | 0 characters | **1,910 characters** — the recipe: ingredients, every step, tips |
+| `/llms.txt` | 404 disguised as the SPA fallback | **`text/plain`**, a real file |
+
+- **[`/llms.txt`](https://zauberkoch.de/llms.txt)** summarises the site for machines:
+  what is public, where it lives, and what deliberately should not be fetched.
+- **A shared recipe carries its recipe twice in the HTML** — as complete
+  schema.org `Recipe` JSON-LD (ingredients with amounts, every step, times,
+  servings, nutrition) *and* as readable prose inside `<noscript>`. The server
+  swaps the landing page's app pitch for the actual recipe there; otherwise the
+  page answered "what is this recipe" with "here is what the app can do".
+- **[`robots.txt`](https://zauberkoch.de/robots.txt)** disallows the signed-in
+  routes (they return nothing but the empty shell without a session) and `/api/` —
+  **every generation costs real model tokens** and is capped per IP and per day.
+  It is not a knowledge API.
+
+Everything that lands in `<noscript>` is model-generated text and is escaped: a
+recipe title containing markup arrives as text, not as a tag (proven by mutation).
+
 ## Quality & numbers
 
 | Measurement | Value | As of |
 |---|---|---|
 | Lighthouse (performance / a11y / best practices / SEO) | **99 / 100 / 100 / 100** | against production, 2026-07-11 |
 | Backend coverage (statements) | **99 %** | 2026-08-15 |
-| Tests | **434** backend · **213** frontend · **35** E2E | 2026-08-16 |
+| Tests | **437** backend · **222** frontend · **42** E2E | 2026-09-16 |
+| Security headers on every page | **6 / 6** | measured 2026-09-16 |
 | Cost per live generation | ~3–4 cents | Sonnet 5, measured |
 
 Non-negotiable when changing things: touch targets ≥ 48 px, a visible `:focus-visible`, contrast ≥ AA,

@@ -1,5 +1,22 @@
+# Zauberkoch — https://zauberkoch.de
+# Öffentlich sind die Startseite, geteilte Rezepte unter /r/ und die Rechtstexte.
+# Maschinenlesbare Zusammenfassung für KI-Agenten: https://zauberkoch.de/llms.txt
+
 User-agent: *
 Allow: /
+
+# Kostet echte Modell-Tokens und ist pro IP und pro Tag gedeckelt.
 Disallow: /api/
+
+# Hinter der Anmeldung — geben ohne Sitzung nur die leere App-Hülle zurück,
+# es gibt dort für einen Crawler nichts zu holen.
+Disallow: /favoriten
+Disallow: /verlauf
+Disallow: /einkauf
+Disallow: /plan
+Disallow: /rezept/
+Disallow: /admin
+Disallow: /bestaetigen
+Disallow: /passwort-zuruecksetzen
 
 Sitemap: https://zauberkoch.de/sitemap.xml

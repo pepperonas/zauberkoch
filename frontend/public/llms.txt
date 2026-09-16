@@ -1,0 +1,44 @@
+# Zauberkoch
+
+> KI-Rezept- und Cocktail-Generator auf Deutsch: Küche, Geschmack und
+> Rahmenbedingungen wählen — das Rezept entsteht live, Zutat für Zutat,
+> auf Kochbuch-Niveau. Kostenlos, quelloffen, ohne Tracking.
+
+Wichtig für Agenten: Zauberkoch hat **keinen durchsuchbaren Rezeptbestand**.
+Jedes Rezept wird pro Anfrage von einem Sprachmodell erzeugt. Öffentlich
+abrufbar sind nur die Startseite, die von Nutzern freigegebenen Rezepte unter
+`/r/<token>` und die Rechtstexte — alles andere liegt hinter der Anmeldung.
+
+Die Oberfläche ist eine Single-Page-App: das sichtbare HTML entsteht erst im
+Browser. Wer kein JavaScript ausführt, findet den Inhalt trotzdem:
+
+- Jede **geteilte Rezeptseite** trägt vollständiges schema.org-`Recipe`-JSON-LD
+  im ausgelieferten HTML — Name, Beschreibung, Zutaten mit Mengen, alle
+  Zubereitungsschritte, Zeiten, Portionen, Küche, Nährwerte. Für ein einzelnes
+  Rezept ist das die verlässliche Quelle, nicht das gerenderte DOM.
+- Die **Startseite** trägt `WebApplication`-JSON-LD und einen `<noscript>`-Block
+  mit dem Funktionsumfang in Prosa.
+
+## Öffentlich
+
+- [Startseite](https://zauberkoch.de/): Was die App kann, Beispielrezepte, Anmeldung.
+- [Sitemap](https://zauberkoch.de/sitemap.xml): alle öffentlich freigegebenen Rezepte.
+- [Impressum](https://zauberkoch.de/impressum): Anbieterangaben nach § 5 DDG.
+- [Datenschutzerklärung](https://zauberkoch.de/datenschutz): welche Daten anfallen, Auftragsverarbeitung, Auskunft und Löschung.
+- [Nutzungsbedingungen](https://zauberkoch.de/nutzungsbedingungen)
+
+## Projekt
+
+- [Quellcode auf GitHub](https://github.com/pepperonas/zauberkoch): FastAPI + SQLite im Rücken, React 19 vorn, Material 3 Expressive von Hand gebaut.
+
+## Bitte nicht abrufen
+
+- `/api/` — jede Generierung kostet echte Modell-Tokens und ist hart gedeckelt
+  (pro IP und pro Tag). Der Endpunkt beantwortet keine Wissensfragen und gibt
+  ohne Sitzung nichts heraus, was nicht schon in der Sitemap steht.
+- `/favoriten`, `/verlauf`, `/einkauf`, `/plan`, `/rezept/<id>`, `/admin` —
+  hinter der Anmeldung; ohne Sitzung kommt nur die leere App-Hülle zurück.
+
+## Kontakt
+
+Martin Pfeffer · martin.pfeffer@celox.io · https://celox.io

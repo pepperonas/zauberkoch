@@ -1,5 +1,8 @@
 """Share links, adopt, OG image, and shopping clear/replace (undo base)."""
 
+import json
+import pathlib
+
 import pytest
 
 from app.services import ratelimit_ip
@@ -183,6 +186,93 @@ def test_share_page_replaces_root_meta_and_title(client, logged_in, mock_ai, mon
     assert 'href="https://zauberkoch.de/"' not in r.text  # root canonical gone
     assert "<title>Pasta al Limone — Zauberkoch</title>" in r.text
     assert r.text.count("og:title") == 1  # exactly the recipe's
+
+
+def _shell_with_noscript(tmp_path):
+    """A shell shaped like the real index.html: root-meta block AND the noscript
+    sentinel the app pitch lives in."""
+    shell = tmp_path / "index.html"
+    shell.write_text(
+        "<!doctype html><html><head><title>Zauberkoch</title>"
+        "<!-- zk:root-meta:start -->"
+        '<meta property="og:title" content="ROOT-OG-TITLE">'
+        "<!-- zk:root-meta:end -->"
+        "</head><body><noscript><style>.ns{}</style>"
+        "<!-- zk:noscript:start -->"
+        '<div class="ns"><h1>APP-PITCH</h1><p>Was die App kann</p></div>'
+        "<!-- zk:noscript:end -->"
+        "</noscript><div id=\"root\"></div></body></html>",
+        encoding="utf-8",
+    )
+    return shell
+
+
+def test_share_page_renders_the_recipe_for_scriptless_clients(
+    client, logged_in, mock_ai, monkeypatch, tmp_path
+):  # noqa: F811
+    """An AI agent or text browser runs no JavaScript, so #root stays empty and
+    the ONLY body content is the noscript block. Serving the generic app pitch
+    there would answer "what is this recipe" with "here is what the app can do"."""
+    from app.api.v1 import share as share_module
+
+    monkeypatch.setattr(share_module, "WEBROOT_INDEX", _shell_with_noscript(tmp_path))
+    _, share = _shared_recipe(client, logged_in)
+    body = client.get(f"/r/{share['share_token']}").text
+
+    assert "APP-PITCH" not in body  # the pitch is gone
+    assert "<h1>Pasta al Limone</h1>" in body  # the recipe took its place
+    assert "Zutaten" in body and "Zubereitung" in body
+    assert "Spaghetti" in body  # an ingredient, by name
+    assert "<style>.ns{}</style>" in body  # the style sits OUTSIDE the sentinel
+    # The root pitch must not survive anywhere on a recipe page.
+    assert "ROOT-OG-TITLE" not in body
+
+
+def test_share_noscript_escapes_recipe_text(
+    client, db_session, logged_in, mock_ai, monkeypatch, tmp_path
+):  # noqa: F811
+    """Recipe text is model output. A title carrying markup must land as text,
+    not as a tag — this block is raw HTML, the JSON-LD next door is not."""
+    from app.api.v1 import share as share_module
+    from app.models.models import Recipe as RecipeRow
+
+    monkeypatch.setattr(share_module, "WEBROOT_INDEX", _shell_with_noscript(tmp_path))
+    recipe_id, share = _shared_recipe(client, logged_in)
+
+    row = db_session.get(RecipeRow, recipe_id)
+    payload = json.loads(row.recipe_json)
+    payload["titel"] = '<img src=x onerror="alert(1)">Pasta'
+    payload["tipps"] = ["<script>bad()</script>"]
+    row.recipe_json = json.dumps(payload)
+    db_session.commit()
+
+    body = client.get(f"/r/{share['share_token']}").text
+    # Scope to the noscript block. The JSON-LD next door carries the same text
+    # as a JSON *string* — correct there, and json.dumps + the "</" escape make
+    # it unable to close its own <script>. Asserting on the whole page would
+    # fail on that safe copy.
+    ns = body[body.index('<div class="ns">') : body.index("</noscript>")]
+    assert "<img src=x" not in ns
+    assert "<script>bad()</script>" not in ns
+    assert "&lt;img src=x" in ns  # present, but as text
+    assert "&lt;script&gt;bad()" in ns
+
+
+def test_llms_txt_and_robots_are_real_files(client):  # noqa: F811
+    """These are static files in the webroot, not routes — but a regression that
+    turns them into the SPA fallback is invisible (HTTP 200 either way), so the
+    repo copies are pinned here."""
+    root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "public"
+    llms = (root / "llms.txt").read_text(encoding="utf-8")
+    robots = (root / "robots.txt").read_text(encoding="utf-8")
+
+    assert llms.startswith("# Zauberkoch")
+    assert "/r/<token>" in llms  # tells an agent where the public content is
+    assert "Disallow: /api/" in robots
+    assert "llms.txt" in robots  # discoverable from robots.txt
+    assert "Sitemap: https://zauberkoch.de/sitemap.xml" in robots
+    for gated in ("/favoriten", "/verlauf", "/einkauf", "/plan", "/rezept/"):
+        assert f"Disallow: {gated}" in robots
 
 
 # ---- shopping clear-all + replace (undo base) --------------------------------

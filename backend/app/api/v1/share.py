@@ -210,6 +210,12 @@ FALLBACK_SHELL = """<!doctype html><html lang="de"><head><meta charset="utf-8"><
 _ROOT_META_RE = re.compile(r"\s*<!--\s*zk:root-meta:start[^>]*-->.*?<!--\s*zk:root-meta:end\s*-->", re.S)
 _TITLE_RE = re.compile(r"<title>.*?</title>", re.S)
 
+# The shell's <noscript> pitches the APP. On a recipe page that is the wrong
+# content: a client that does not run JavaScript — an AI agent, a text browser,
+# a reader mode — would read "Zauberkoch can do X and Y" where it asked for one
+# specific recipe. This block swaps it for the recipe itself.
+_NOSCRIPT_RE = re.compile(r"<!--\s*zk:noscript:start.*?<!--\s*zk:noscript:end\s*-->", re.S)
+
 
 def _meta_block(row: Recipe, token: str) -> str:
     settings = get_settings()
@@ -237,6 +243,65 @@ def _meta_block(row: Recipe, token: str) -> str:
         f'<meta name="twitter:description" content="{desc}">'
         f'<meta name="twitter:image" content="{image}">'
     )
+
+
+def _noscript_block(row: Recipe, token: str) -> str:
+    """The recipe as plain semantic HTML, for clients that do not run scripts.
+
+    Same data as the JSON-LD next door, but prose an agent can read without
+    knowing schema.org — and the only thing a text browser ever sees.
+
+    Every field is AI-generated text, so every field is escaped: an apostrophe
+    in a recipe title must not be able to open a tag.
+    """
+    r = json.loads(row.recipe_json)
+    e = html.escape
+    base = get_settings().zk_base_url.rstrip("/")
+    is_drink = row.mode == "cocktail"
+
+    facts: list[str] = []
+    if r.get("kueche"):
+        facts.append(f"Küche: {e(str(r['kueche']))}")
+    if r.get("portionen"):
+        facts.append(f"{e(str(r['portionen']))} {'Drinks' if is_drink else 'Portionen'}")
+    if r.get("zeit_gesamt"):
+        facts.append(f"{e(str(r['zeit_gesamt']))} Min. gesamt")
+    if r.get("schwierigkeit"):
+        facts.append(f"Schwierigkeit: {e(str(r['schwierigkeit']))}")
+
+    def zutat(z: dict) -> str:
+        menge, einheit = z.get("menge"), z.get("einheit") or ""
+        vorn = f"{menge} {einheit}".strip() if menge not in (None, "") else ""
+        return e(f"{vorn} {z.get('name', '')}".strip())
+
+    parts = [
+        f"<h1>{e(r.get('titel', 'Rezept'))}</h1>",
+        f"<p class=\"lead\">{e(r.get('teaser', ''))}</p>",
+    ]
+    if facts:
+        parts.append(f"<p>{' · '.join(facts)}</p>")
+    if r.get("zutaten"):
+        parts.append("<h2>Zutaten</h2><ul>")
+        parts += [f"<li>{zutat(z)}</li>" for z in r["zutaten"]]
+        parts.append("</ul>")
+    if r.get("schritte"):
+        parts.append("<h2>Zubereitung</h2><ol>")
+        for step in r["schritte"]:
+            titel = e(step.get("titel") or "")
+            text = e(step.get("text") or "")
+            parts.append(f"<li><strong>{titel}</strong> {text}</li>" if titel else f"<li>{text}</li>")
+        parts.append("</ol>")
+    if r.get("tipps"):
+        parts.append("<h2>Tipps</h2><ul>")
+        parts += [f"<li>{e(str(tip))}</li>" for tip in r["tipps"]]
+        parts.append("</ul>")
+    parts.append(
+        f'<p class="hint">Dieses Rezept hat der Zauberkoch geschrieben. '
+        f'Für den Koch-Modus, die Einkaufsliste und eigene Rezepte brauchst du '
+        f'JavaScript — <a href="{base}/">zur App</a>.</p>'
+        f'<footer>© 2026 Martin Pfeffer · <a href="https://celox.io">celox.io</a></footer>'
+    )
+    return f'<div class="ns">{"".join(parts)}</div>'
 
 
 def _jsonld(row: Recipe, token: str) -> str:
@@ -293,6 +358,7 @@ def shared_page(token: str, request: Request, db: DbSession = Depends(get_db)) -
     shell = _ROOT_META_RE.sub("", shell)
     page_title = html.escape(f"{json.loads(row.recipe_json).get('titel', 'Rezept')} — Zauberkoch")
     shell = _TITLE_RE.sub(f"<title>{page_title}</title>", shell, count=1)
+    shell = _NOSCRIPT_RE.sub(lambda _: _noscript_block(row, token), shell, count=1)
     page = shell.replace("</head>", f"{_meta_block(row, token)}{_jsonld(row, token)}</head>", 1)
     return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 

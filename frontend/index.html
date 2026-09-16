@@ -41,6 +41,73 @@
     <script src="/theme-init.js"></script>
   </head>
   <body>
+    <!-- What a client without JavaScript sees. The app itself renders into
+         #root, so without this block the body is EMPTY — an AI agent or a
+         text browser got the meta description and nothing else (measured).
+         The <style> lives inside the <noscript> on purpose: it then exists
+         only when scripting is off and cannot touch the app under any
+         circumstance. Browsers with JS never render any of this. -->
+    <noscript>
+      <style>
+        .ns { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 3rem;
+              font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+              color: #1a1c19; }
+        .ns h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 .5rem; }
+        .ns h2 { font-size: 1.1rem; margin: 2rem 0 .5rem; }
+        .ns .lead { font-size: 1.1rem; color: #414941; margin: 0 0 1.5rem; }
+        .ns ul { padding-left: 1.2rem; margin: 0 0 1.5rem; }
+        .ns li { margin: .35rem 0; }
+        .ns .hint { border-left: 3px solid #2e6b33; background: #eef6e9;
+                    padding: .85rem 1rem; border-radius: 0 8px 8px 0; margin: 1.5rem 0; }
+        .ns a { color: #2e6b33; }
+        .ns footer { margin-top: 2rem; font-size: .9rem; color: #414941; }
+        @media (prefers-color-scheme: dark) {
+          .ns { color: #e2e5df; } .ns .lead, .ns footer { color: #a8b0a6; }
+          .ns .hint { background: #1b2418; border-left-color: #8fd68f; }
+          .ns a { color: #8fd68f; }
+        }
+      </style>
+      <!-- zk:noscript:start — replaced by share.py on /r/{token} with the
+           actual recipe, so a JS-less client gets THAT page's content and not
+           this generic app pitch. The <style> above stays put either way. -->
+      <div class="ns">
+        <h1>Zauberkoch — dein KI-Koch für Rezepte &amp; Cocktails</h1>
+        <p class="lead">
+          Sag, worauf du Lust hast — Länderküche, Geschmack, was da sein muss und
+          was nicht — und sieh live zu, wie daraus ein Rezept auf Kochbuch-Niveau
+          entsteht: Zutat für Zutat, Schritt für Schritt, mit exakten Mengen.
+          Kostenlos, quelloffen, ohne Tracking.
+        </p>
+
+        <h2>Was die App kann</h2>
+        <ul>
+          <li><strong>Rezepte und Drinks</strong> — zwei Modi, eigene Länderküchen, Geschmacksrichtungen und Gericht-Arten.</li>
+          <li><strong>Live-Aufbau</strong> — das Rezept erscheint während des Schreibens, kein Warten auf einen fertigen Block.</li>
+          <li><strong>Koch-Modus</strong> — Schritt für Schritt durch die Zubereitung, auf Wunsch per Sprache gesteuert.</li>
+          <li><strong>Einkaufsliste</strong> — Zutaten mehrerer Rezepte zusammengefasst, Mengen und Einheiten addiert.</li>
+          <li><strong>Wochenplan</strong> — Gerichte auf Tage legen und die ganze Woche in die Einkaufsliste kippen.</li>
+          <li><strong>Kühlschrank-Scan</strong> — Foto von dem, was da ist; daraus wird ein Vorschlag.</li>
+          <li><strong>Teilen</strong> — Rezepte per Link weitergeben, auf Wunsch öffentlich gelistet.</li>
+        </ul>
+
+        <p class="hint">
+          Zum Kochen brauchst du JavaScript: das Rezept wird live gestreamt, während
+          die KI es schreibt. Schalte es für zauberkoch.de ein — die Seite lädt
+          nichts von fremden Servern nach und setzt keine Tracking-Cookies.
+        </p>
+
+        <h2>Weiterlesen</h2>
+        <ul>
+          <li><a href="/sitemap.xml">Öffentlich geteilte Rezepte</a> — jede dieser Seiten trägt ihr vollständiges Rezept als schema.org-Daten im HTML.</li>
+          <li><a href="/llms.txt">llms.txt</a> — maschinenlesbare Zusammenfassung dieser Seite.</li>
+          <li><a href="https://github.com/pepperonas/zauberkoch">Quellcode auf GitHub</a></li>
+          <li><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/nutzungsbedingungen">Nutzungsbedingungen</a></li>
+        </ul>
+
+        <footer>© 2026 Martin Pfeffer · <a href="https://celox.io">celox.io</a></footer>
+      </div>
+      <!-- zk:noscript:end -->
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
