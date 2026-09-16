@@ -3,7 +3,8 @@ export const de = {
   app: {
     name: 'Zauberkoch',
     tagline: 'Dein KI-Koch für Rezepte & Cocktails',
-    footer: '© 2026 Martin Pfeffer | celox.io',
+    footerCopyright: '© 2026 Martin Pfeffer',
+    footerBrand: 'celox.io',
   },
   nav: {
     generate: 'Zaubern',

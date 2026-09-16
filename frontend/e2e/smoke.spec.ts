@@ -153,6 +153,28 @@ test('the footer offers GitHub, a donation and a Google review', async ({ page }
   await expect(review).toHaveAttribute('rel', /noopener/);
 });
 
+test('the copyright line links celox.io into a new tab', async ({ page, context }) => {
+  await page.route('**/api/v1/me', (route) => route.fulfill({ json: { authenticated: false } }));
+  await page.goto('/');
+
+  const brand = page.locator('.shell__footer .shell__brand');
+  await expect(brand).toHaveText('celox.io');
+  await expect(brand).toHaveAttribute('href', 'https://celox.io');
+  await expect(brand).toHaveAttribute('target', '_blank');
+  // `rel` is not decoration: without noopener the opened page can reach back
+  // through window.opener and navigate the app away mid-generation.
+  await expect(brand).toHaveAttribute('rel', /noopener/);
+
+  // The line still reads as one sentence — the separators around the link are
+  // decorative, so a screen reader must not announce them.
+  await expect(page.locator('.shell__footer')).toContainText(/© 2026 Martin Pfeffer \| celox\.io \| v\d+/);
+
+  // And the claim "new tab" is tested by opening one, not by trusting target.
+  const [opened] = await Promise.all([context.waitForEvent('page'), brand.click()]);
+  expect(opened.url()).toMatch(/^https:\/\/celox\.io/);
+  await expect(page).toHaveURL(/localhost/); // the app itself never navigated
+});
+
 test.describe('colophon genie', () => {
   const GENIE_ME = {
     authenticated: true, is_admin: false, id: 1, email: 'a@b.de', name: 'A', picture_url: '',

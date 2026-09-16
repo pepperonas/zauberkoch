@@ -308,7 +308,11 @@ function Shell() {
           <span aria-hidden>·</span>
           <Link to="/nutzungsbedingungen" viewTransition>{t('legal.terms')}</Link>
         </nav>
-        {t('app.footer')} <span className="shell__version">| {__APP_VERSION__}</span>
+        {t('app.footerCopyright')} <span aria-hidden>|</span>{' '}
+        <a className="shell__brand" href="https://celox.io" target="_blank" rel="noopener noreferrer">
+          {t('app.footerBrand')}
+        </a>{' '}
+        <span className="shell__version">| {__APP_VERSION__}</span>
       </footer>
 
       {me && (
