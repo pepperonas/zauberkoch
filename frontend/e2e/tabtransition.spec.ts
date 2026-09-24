@@ -143,11 +143,19 @@ test('a card click right after a tab switch clears the stamp before the morph', 
   await page.locator('.recipecard').first().click();
 
   // The recorder proves we really were inside the dangerous window (a stamp
-  // was set), so "null now" means the card click cleared it — not that the
-  // tab click never stamped in the first place.
+  // was set), so a later clear means the card click did it — not that the tab
+  // click never stamped in the first place.
   expect(await stamps(page)).toContain('back');
-  expect(await stamp(page)).toBeNull();
+
+  // Wait for the navigation FIRST. Reading the live attribute straight after
+  // the click races the click handler: the card is clicked while the tab
+  // transition still animates, and a round-trip that lands before
+  // clearTabTransition() runs reads the stamp that is still legitimately
+  // there. Flaked about one run in five that way.
   await expect(page).toHaveURL(/\/rezept\/42$/);
+  // Cleared-and-stays-cleared is monotone, so polling for it is safe (unlike
+  // polling for the stamp itself, which lives 650ms — see recordStamps).
+  await expect.poll(() => stamp(page)).toBeNull();
 });
 
 test('title and tools exist exactly once per tab page', async ({ page }) => {
@@ -257,14 +265,24 @@ test.describe('cross-tab card morphs', () => {
     });
 
     await page.getByRole('link', { name: 'Verlauf' }).click();
-    await page.waitForTimeout(150); // inside the stamp's lifetime
+    // Late enough that the tab transition has finished (240ms out + 300ms in
+    // + 70ms stagger), early enough that the stamp is still alive (650ms) —
+    // the stale stamp IS the danger this test exists for. At 150ms the tab VT
+    // was still running, and react-router then skips starting a second one:
+    // the detail click produced no transition of its own and `at(-1)` picked
+    // up the TAB switch, which legitimately carries card layers. That flaked
+    // roughly one run in three.
+    await page.waitForTimeout(450);
     await page.locator('.recipecard').first().click();
     await expect(page).toHaveURL(/\/rezept\/42$/);
 
     const runs = await page.evaluate(() => (window as unknown as { __vtNames: string[][] }).__vtNames);
-    const detail = runs.at(-1) ?? [];
-    // The detail morph names exactly the hero pair — no inherited card layers.
-    expect(detail.filter((n) => n.startsWith('zk-card-'))).toEqual([]);
-    expect(detail).toContain('zk-shared-motif');
+    // Pick the transition by its SIGNATURE, not by position: the detail morph
+    // is the one naming the hero. Counting from the end assumes an ordering
+    // the browser never promised.
+    const detail = runs.find((r) => r.includes('zk-shared-motif'));
+    expect(detail, 'no detail morph was recorded at all').toBeTruthy();
+    // It names exactly the hero pair — no inherited card layers.
+    expect(detail!.filter((n) => n.startsWith('zk-card-'))).toEqual([]);
   });
 });

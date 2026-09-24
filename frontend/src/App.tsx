@@ -21,6 +21,7 @@ import { clearApiCache, LAST_ACCOUNT_KEY, shouldClearApiCache } from './lib/apiC
 import { spring } from './motion/springs';
 import { clearTabTransition, markTabTransition, TAB_DIR_TTL_MS, TAB_ORDER } from './lib/tabTransition';
 import { cancelGeneration, getGeneration } from './state/generation';
+import { avatarSrc } from './lib/avatar';
 import { useApp } from './state/app';
 import { useOnline } from './state/useOnline';
 import './App.css';
@@ -89,18 +90,31 @@ const NAV_ITEMS = TAB_ORDER.map((to) => ({ to, ...NAV_META[to] }));
  * (including the browser/system back button). Scroll is restored by
  * <ScrollRestoration/>. The sticky header's blur is captured in the snapshot.
  */
+/** Kantenlaenge des Header-Avatars in CSS-Pixeln. Muss mit `.avatar` in
+ *  App.css uebereinstimmen — ein Test haelt die beiden zusammen. Die bei
+ *  Google angefragte Bildgroesse wird daraus mal devicePixelRatio gerechnet. */
+const AVATAR_PX = 34;
+
 function Shell() {
   const { me, meLoading, toggleTheme, refreshMe } = useApp();
   const location = useLocation();
   const online = useOnline();
   const reduced = useReducedMotion();
   const [profileOpen, setProfileOpen] = useState(false);
+  // Google-Avatar-URLs verrotten (Foto gewechselt, Ratenbegrenzung) — ohne
+  // diesen Merker bleibt das <img> stehen und der Browser malt sein
+  // Kaputt-Symbol samt Alt-Text aus dem Knopf heraus (reproduziert 2026-09-24).
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   // Logout runs behind a CRT power-off overlay: 'anim' plays the tube
   // shutdown, 'done' holds full black while the session actually ends, and
   // once `me` is gone (landing page mounted underneath) the overlay exits
   // with a short reveal fade. Reduced motion skips the theatrics entirely.
   const [crtPhase, setCrtPhase] = useState<'idle' | 'anim' | 'done'>('idle');
+
+  // Ein neues Foto verdient einen neuen Versuch — sonst bliebe das Glyph
+  // stehen, bis die Seite neu geladen wird.
+  useEffect(() => setAvatarBroken(false), [me?.picture_url]);
 
   // CRT power-ON after a successful login: LandingPage arms a sessionStorage
   // flag before the OAuth full-page redirect; we read it once on boot (and
@@ -226,8 +240,21 @@ function Shell() {
           {me && (
             <>
               <IconButton label={t('profile.open')} onClick={() => setProfileOpen(true)}>
-                {me.picture_url ? (
-                  <img className="avatar" src={me.picture_url} alt={me.name || me.email} width={34} height={34} referrerPolicy="no-referrer" />
+                {me.picture_url && !avatarBroken ? (
+                  /* alt="" mit Absicht: der Knopf traegt bereits aria-label
+                     (profile.open), ein zweiter Name waere redundant — und der
+                     Alt-Text ist genau das, was bei einem Ladefehler sichtbar
+                     aus dem Knopf lief. AVATAR_PX haelt Markup, CSS und die
+                     bei Google angefragte Groesse an EINER Zahl. */
+                  <img
+                    className="avatar"
+                    src={avatarSrc(me.picture_url, AVATAR_PX)}
+                    alt=""
+                    width={AVATAR_PX}
+                    height={AVATAR_PX}
+                    referrerPolicy="no-referrer"
+                    onError={() => setAvatarBroken(true)}
+                  />
                 ) : (
                   <Icon name="user" size={24} />
                 )}

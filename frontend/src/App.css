@@ -234,6 +234,8 @@
 .stack { display: flex; flex-direction: column; gap: var(--space-4); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .muted { color: var(--c-on-surface-variant); }
+/* 34px muss AVATAR_PX in App.tsx entsprechen (Test haelt sie zusammen) — daraus
+   wird die bei Google angefragte Bildgroesse gerechnet, siehe lib/avatar.ts. */
 .avatar { width: 34px; height: 34px; border-radius: var(--shape-full); object-fit: cover; }
 
 @media (max-width: 400px) {
