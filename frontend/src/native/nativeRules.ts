@@ -27,6 +27,22 @@ export function nativeLoginUrl(origin: string, challenge: string): string {
 
 export type LoginLink = { token: string } | { error: string } | null;
 
+/** The `login` part of a deep link, whichever way the engine parsed it.
+ *
+ * ⚠ Chromium and Node disagree here, and the app runs on one while the tests
+ * run on the other. For a non-special scheme -- any custom scheme, not just
+ * ours -- Chromium does NOT split off an authority: `hostname` comes back
+ * empty and the whole thing lands in `pathname` as "//login". Node's URL
+ * parses a host and leaves `pathname` empty. Measured in the shipped WebView
+ * (Chrome 124) against Node 20, for four different schemes.
+ *
+ * A rule written against either one alone therefore only works in one of the
+ * two places. This cost a device debugging session: the unit tests were green
+ * and every native login silently did nothing, because `hostname` was "". */
+export function linkTarget(hostname: string, pathname: string): string {
+  return hostname || pathname.replace(/^\/+/, '').split('/')[0];
+}
+
 /** Read the return link from the Custom Tab.
  *
  * Deliberately strict about scheme AND host: the shell is handed every intent
@@ -40,7 +56,7 @@ export function parseLoginLink(url: unknown): LoginLink {
   } catch {
     return null;
   }
-  if (u.protocol !== `${LOGIN_SCHEME}:` || u.hostname !== 'login') return null;
+  if (u.protocol !== `${LOGIN_SCHEME}:` || linkTarget(u.hostname, u.pathname) !== 'login') return null;
   const token = u.searchParams.get('t');
   if (token) return { token };
   const error = u.searchParams.get('error');

@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { LOGIN_SCHEME, challengeOf, isNativeShell, makeVerifier, nativeLoginUrl, parseLoginLink } from './nativeRules';
+import {
+  LOGIN_SCHEME,
+  challengeOf,
+  isNativeShell,
+  linkTarget,
+  makeVerifier,
+  nativeLoginUrl,
+  parseLoginLink,
+} from './nativeRules';
 
 describe('the fingerprint the app sends through the browser', () => {
   it('matches the backend byte for byte', async () => {
@@ -24,6 +32,89 @@ describe('the secret that never leaves the app', () => {
   it('is different every run', () => {
     const seen = new Set(Array.from({ length: 50 }, () => makeVerifier()));
     expect(seen.size).toBe(50);
+  });
+});
+
+describe('the two ways an engine may parse a custom scheme', () => {
+  // These cases cannot BOTH be produced by one `new URL()`: Node parses a host
+  // for custom schemes, Chromium does not. Testing the rule directly is the
+  // only way this file can cover the shape the app actually sees -- and the
+  // shape it actually sees is the one that was broken on a device while every
+  // test here was green.
+  it('reads the host when the engine parsed one (Node)', () => {
+    expect(linkTarget('login', '')).toBe('login');
+  });
+
+  it('reads the first path segment when it did not (Chromium)', () => {
+    expect(linkTarget('', '//login')).toBe('login');
+  });
+
+  it('keeps a trailing path out of it', () => {
+    expect(linkTarget('', '//login/extra')).toBe('login');
+    expect(linkTarget('login', '/extra')).toBe('login');
+  });
+
+  it('still tells a wrong target apart in both shapes', () => {
+    expect(linkTarget('', '//logout')).toBe('logout');
+    expect(linkTarget('logout', '')).toBe('logout');
+  });
+
+  it('is empty when there is nothing to read', () => {
+    expect(linkTarget('', '')).toBe('');
+    expect(linkTarget('', '//')).toBe('');
+  });
+});
+
+describe('the return link as the app\'s engine actually parses it', () => {
+  /** Chromium's parse of a custom scheme: no authority, everything in the
+   * path. Node cannot produce this, so the engine is emulated -- otherwise a
+   * refactor back to `u.hostname` would leave this suite green while every
+   * native login silently did nothing, which is exactly what happened once. */
+  class ChromiumUrl {
+    // `!`: for a special scheme the constructor returns a real URL instead,
+    // which replaces `this` entirely — these fields are then never observed.
+    protocol!: string;
+    hostname = '';
+    pathname!: string;
+    searchParams!: URLSearchParams;
+    constructor(raw: string, base?: string) {
+      const m = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^?#]*)(\?[^#]*)?/.exec(raw);
+      if (!m || /^(https?|ftp|ws|wss|file)$/i.test(m[1])) return new Real(raw, base) as never;
+      this.protocol = `${m[1]}:`;
+      this.pathname = `//${m[2]}`;
+      this.searchParams = new URLSearchParams(m[3] ?? '');
+    }
+  }
+  const Real = globalThis.URL;
+
+  beforeEach(() => {
+    globalThis.URL = ChromiumUrl as unknown as typeof URL;
+  });
+  afterEach(() => {
+    globalThis.URL = Real;
+  });
+
+  it('still finds the token', () => {
+    expect(parseLoginLink(`${LOGIN_SCHEME}://login?t=abc123`)).toEqual({ token: 'abc123' });
+  });
+
+  it('still finds a failure', () => {
+    expect(parseLoginLink(`${LOGIN_SCHEME}://login?error=cancelled`)).toEqual({ error: 'cancelled' });
+  });
+
+  it('still rejects the wrong target', () => {
+    expect(parseLoginLink(`${LOGIN_SCHEME}://logout?t=abc`)).toBeNull();
+  });
+
+  it('still rejects a foreign scheme', () => {
+    expect(parseLoginLink('kiezfinder://login?t=abc')).toBeNull();
+  });
+
+  it('proves the emulation really differs from Node', () => {
+    // Guards the guard: if this stub ever stopped behaving like Chromium, the
+    // four tests above would quietly become duplicates of the Node ones.
+    expect(new URL(`${LOGIN_SCHEME}://login?t=1`).hostname).toBe('');
+    expect(new Real(`${LOGIN_SCHEME}://login?t=1`).hostname).toBe('login');
   });
 });
 

@@ -161,6 +161,21 @@ def test_every_rejection_reads_the_same(client, monkeypatch):
     assert seen == {"handoff_invalid"}
 
 
+def test_a_token_of_another_purpose_never_redeems(client):
+    """The other direction of the same binding, and the reason it needs a test
+    at all: nothing else in this system currently carries BOTH a challenge and
+    a session id, so the guard is invisible in practice. Without this pin, the
+    next token type to grow those fields would silently become a valid
+    handoff. (Found by mutation: removing the purpose check left the suite
+    green.)"""
+    from app.core.security import sign_payload
+
+    look_alike = sign_payload({"p": "reset", "sid": 1, "ch": native_login.challenge_for(VERIFIER)})
+    assert native_login.read_handoff_token(look_alike, VERIFIER) is None
+    r = client.post("/api/v1/auth/native/redeem", json={"t": look_alike, "v": VERIFIER})
+    assert r.status_code == 400
+
+
 def test_a_handoff_token_is_not_a_verify_or_reset_token(client, monkeypatch):
     """Purpose binding, the same guarantee auth_tokens.py makes."""
     from app.services import auth_tokens
