@@ -19,6 +19,7 @@ import type { GalleryItem } from '../lib/types';
 import { fmtMin } from '../components/recipe/RecipeView';
 import { riseIn, spring, stagger } from '../motion/springs';
 import type { GenEvent } from '../state/generation';
+import { startGoogleLogin } from '../lib/googleLogin';
 
 const EMPTY: RecipeViewData = { meta: null, zutaten: [], schritte: [], tipps: [] };
 
@@ -59,7 +60,7 @@ export function LandingPage() {
     // Arm the CRT power-ON reveal for after the OAuth round-trip (full page
     // navigation — sessionStorage survives it; Shell reads + clears the flag).
     sessionStorage.setItem('zk-crt-on', '1');
-    window.location.href = '/api/v1/auth/login';
+    startGoogleLogin();
   };
 
   return (

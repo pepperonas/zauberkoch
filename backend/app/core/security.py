@@ -86,6 +86,15 @@ def clear_session_cookie(response: Response) -> None:
     response.delete_cookie(SESSION_COOKIE, path="/")
 
 
+def session_expired(session: SessionModel) -> bool:
+    """Shared by the cookie path and the native handoff, so the two can never
+    disagree about what counts as a live session."""
+    expires = session.expires_at
+    if expires.tzinfo is None:  # SQLite returns naive datetimes
+        expires = expires.replace(tzinfo=timezone.utc)
+    return expires < datetime.now(timezone.utc)
+
+
 def _load_session(request: Request, db: DbSession) -> SessionModel | None:
     token = request.cookies.get(SESSION_COOKIE)
     if not token:
@@ -93,10 +102,7 @@ def _load_session(request: Request, db: DbSession) -> SessionModel | None:
     session = db.execute(select(SessionModel).where(SessionModel.token == token)).scalar_one_or_none()
     if session is None:
         return None
-    expires = session.expires_at
-    if expires.tzinfo is None:  # SQLite returns naive datetimes
-        expires = expires.replace(tzinfo=timezone.utc)
-    if expires < datetime.now(timezone.utc):
+    if session_expired(session):
         db.delete(session)
         db.commit()
         return None

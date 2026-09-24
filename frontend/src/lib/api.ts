@@ -59,6 +59,10 @@ export const api = {
   register: (email: string, password: string, passwordConfirm: string) =>
     post<Ok>('/auth/register', { email, password, password_confirm: passwordConfirm }),
   loginPassword: (email: string, password: string) => post<Ok>('/auth/login', { email, password }),
+  /** Hand a Google login finished in the app's Custom Tab into this
+   * WebView. Must be called from the page itself -- that is what puts the
+   * session cookie in the WebView's jar instead of the browser's. */
+  redeemNativeLogin: (t: string, v: string) => post<Ok>('/auth/native/redeem', { t, v }),
   verifyEmail: (token: string) => post<{ ok: boolean; first_time: boolean }>('/auth/verify', { token }),
   forgotPassword: (email: string) => post<Ok>('/auth/forgot', { email }),
   resetPassword: (token: string, password: string, passwordConfirm: string) =>

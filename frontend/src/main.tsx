@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router-dom';
 
 import { router } from './App';
 import { SnackbarProvider } from './components/ui/Snackbar';
+import { isNativeShell } from './native/nativeRules';
 import { AppProvider } from './state/app';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -16,6 +17,15 @@ const queryClient = new QueryClient({
 // react-router owns scroll restoration (via <ScrollRestoration/> in the shell),
 // coordinated with its view transitions — stop the browser from racing it.
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+// The Android shell, and only there. The chunk holding the Capacitor plugins
+// is never requested in a browser, so the web bundle is unchanged.
+if (isNativeShell()) {
+  void import('./native').then((m) => m.init()).catch(() => {
+    /* shell extras unavailable — the app still works, login just stays on the
+       web path (where Google will refuse, visibly, rather than silently) */
+  });
+}
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

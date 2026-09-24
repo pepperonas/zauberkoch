@@ -61,3 +61,15 @@ class VerifyBody(BaseModel):
 
 
 __all__ = ["RegisterBody", "LoginBody", "ForgotBody", "ResetBody", "VerifyBody", "PasswordError"]
+
+
+class NativeRedeemBody(BaseModel):
+    """Handoff of a Google login finished in the app's Custom Tab.
+
+    ``t`` is the signed one-time token that arrived over the app's URL scheme,
+    ``v`` the verifier the app kept to itself. Neither is useful without the
+    other -- see services/native_login.py for why that matters on Android.
+    """
+
+    t: str
+    v: str

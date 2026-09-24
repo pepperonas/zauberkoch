@@ -15,6 +15,7 @@ import { t } from '../i18n';
 import { api } from '../lib/api';
 import { ShareIntro } from '../features/share/ShareIntro';
 import { useApp } from '../state/app';
+import { startGoogleLogin } from '../lib/googleLogin';
 
 export function SharePage() {
   const { token } = useParams();
@@ -88,7 +89,7 @@ export function SharePage() {
           me ? (
             <Button big onClick={() => void adopt()}><Icon name="plus" size={20} /> {t('shared.adopt')}</Button>
           ) : (
-            <Button big onClick={() => (window.location.href = '/api/v1/auth/login')}>
+            <Button big onClick={startGoogleLogin}>
               <Icon name="wand" size={20} /> {t('shared.loginCta')}
             </Button>
           )

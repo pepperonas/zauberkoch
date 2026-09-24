@@ -22,6 +22,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Return path of a Google login performed in a Custom Tab.
+                 Google refuses OAuth inside an embedded WebView, so the flow
+                 runs in the browser and hands the finished session back here.
+                 The scheme is NOT exclusive to this app; the handoff is
+                 protected by a verifier instead (backend native_login.py). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/custom_url_scheme" android:host="login" />
+            </intent-filter>
+
         </activity>
 
         <provider

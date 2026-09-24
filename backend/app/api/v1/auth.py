@@ -18,14 +18,23 @@ from app.core.security import (
     create_session,
     get_current_session,
     require_csrf,
+    session_expired,
     set_session_cookie,
     sign_payload,
     unsign_payload,
 )
 from app.db import get_db
 from app.models import AllowlistEntry, Session as SessionModel, User
-from app.schemas.auth import ForgotBody, LoginBody, PasswordError, RegisterBody, ResetBody, VerifyBody
-from app.services import auth_tokens, google_oauth, mailer, ratelimit
+from app.schemas.auth import (
+    ForgotBody,
+    LoginBody,
+    NativeRedeemBody,
+    PasswordError,
+    RegisterBody,
+    ResetBody,
+    VerifyBody,
+)
+from app.services import auth_tokens, google_oauth, mailer, native_login, ratelimit
 from app.services.limits import get_limits
 from app.services.passwords import hash_password, verify_password
 from app.services.ratelimit_ip import check_ip_limit
@@ -56,14 +65,23 @@ def _signup_allowed(db: DbSession, email: str) -> bool:
 
 
 @router.get("/login")
-def login(request: Request) -> Response:
+def login(request: Request, native: int = 0, cc: str = "") -> Response:
+    """Start Google OAuth. ``native=1`` marks a run that was opened from the
+    app in a Custom Tab: the callback then hands the finished session back
+    over the app's URL scheme instead of setting a cookie in the browser.
+    ``cc`` is the app's challenge (see services/native_login.py) and is bound
+    into the signed state cookie, so it cannot be swapped en route."""
     check_ip_limit(request, scope="auth", limit=20, window_s=60)
     state = secrets.token_urlsafe(24)
     verifier, challenge = google_oauth.make_pkce()
+    # A native run without a usable challenge is treated as an ordinary web
+    # login rather than rejected: the worst case is a redirect the app ignores,
+    # never a handoff token that anybody can redeem.
+    is_native = bool(native) and native_login.is_valid_challenge(cc)
     response = RedirectResponse(google_oauth.build_auth_url(state, challenge), status_code=307)
     response.set_cookie(
         STATE_COOKIE,
-        sign_payload({"state": state, "verifier": verifier}),
+        sign_payload({"state": state, "verifier": verifier, "native": is_native, "cc": cc if is_native else ""}),
         max_age=600,
         httponly=True,
         samesite="lax",
@@ -83,16 +101,23 @@ def callback(
 ) -> Response:
     check_ip_limit(request, scope="auth", limit=20, window_s=60)
 
+    # Read the state cookie up front: it says whether this run came from the
+    # app, and even the earliest failures have to be routed back over the URL
+    # scheme -- otherwise the Custom Tab stays open on a web error page in
+    # front of an app that never learns the attempt is over.
+    stashed = unsign_payload(request.cookies.get(STATE_COOKIE, ""))
+    is_native = bool(stashed and stashed.get("native"))
+
     def fail(reason: str) -> Response:
-        logger.info("oauth callback rejected: %s", reason)
-        resp = RedirectResponse(_frontend_url(f"/?login_error={reason}"), status_code=303)
+        logger.info("oauth callback rejected: %s (native=%s)", reason, is_native)
+        target = native_login.deep_link(error=reason) if is_native else _frontend_url(f"/?login_error={reason}")
+        resp = RedirectResponse(target, status_code=303)
         resp.delete_cookie(STATE_COOKIE, path="/api/v1/auth")
         return resp
 
     if error or not code or not state:
         return fail("cancelled")
 
-    stashed = unsign_payload(request.cookies.get(STATE_COOKIE, ""))
     if not stashed or stashed.get("state") != state:
         return fail("state_mismatch")
 
@@ -147,11 +172,51 @@ def callback(
     db.commit()
 
     session = create_session(db, user)
+    if is_native:
+        # Deliberately NO session cookie here: it would land in the Custom
+        # Tab's jar, which the app cannot read, and leave a second logged-in
+        # surface behind on the device. The app redeems the handoff from its
+        # own WebView, which is where the cookie belongs.
+        token = native_login.make_handoff_token(session.id, str(stashed.get("cc", "")))
+        response = RedirectResponse(native_login.deep_link(token=token), status_code=303)
+        response.delete_cookie(STATE_COOKIE, path="/api/v1/auth")
+        logger.info("login ok user=%s (native handoff)", user.id)
+        return response
+
     response = RedirectResponse(_frontend_url("/"), status_code=303)
     response.delete_cookie(STATE_COOKIE, path="/api/v1/auth")
     set_session_cookie(response, session)
     logger.info("login ok user=%s", user.id)
     return response
+
+
+@router.post("/native/redeem")
+def native_redeem(
+    body: NativeRedeemBody,
+    request: Request,
+    response: Response,
+    db: DbSession = Depends(get_db),
+) -> dict:
+    """Turn the app's one-time handoff into a session cookie.
+
+    Called by the page inside the app's WebView, which is the entire point:
+    the Set-Cookie then lands in the WebView's cookie jar rather than in the
+    Custom Tab that actually performed the OAuth dance.
+
+    No CSRF here -- like every other login route, the caller has no session to
+    protect yet. The token's own signature, its two-minute lifetime and the
+    verifier are what stand in the way.
+    """
+    check_ip_limit(request, scope="native", limit=20, window_s=60)
+    session_id = native_login.read_handoff_token(body.t, body.v)
+    session = db.get(SessionModel, session_id) if session_id is not None else None
+    # One message for every reason: a caller must not be able to tell a forged
+    # token from an expired one, or probe which session ids exist.
+    if session is None or session_expired(session):
+        raise _err(400, "handoff_invalid", "Die Anmeldung ist abgelaufen. Bitte erneut versuchen.")
+    set_session_cookie(response, session)
+    logger.info("native handoff redeemed user=%s", session.user_id)
+    return {"ok": True}
 
 
 @router.get("/dev-login")
