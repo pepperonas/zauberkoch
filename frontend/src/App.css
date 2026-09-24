@@ -7,11 +7,12 @@
   max-width: 720px;
   margin: 0 auto;
   padding: 0 var(--space-4);
-  /* Reserve space for the viewport-fixed header (out of flow). */
-  padding-top: var(--header-h);
-}
-@media (display-mode: standalone) {
-  .shell { padding-top: calc(var(--header-h) + env(safe-area-inset-top)); }
+  /* Reserve space for the viewport-fixed header (out of flow), plus whatever
+     the platform declares unsafe at the top. env() gates itself: it is 0px in
+     an ordinary browser tab and only grows where content would really sit
+     under a notch or a status bar. Deliberately NOT wrapped in
+     `@media (display-mode: standalone)` -- see .shell__header below. */
+  padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
 }
 
 .shell__header {
@@ -34,17 +35,18 @@
   right: 0;
   width: min(100%, 720px);
   margin-inline: auto;
-  height: var(--header-h);
+  /* Grow INTO the unsafe top strip instead of hiding under it. Not gated on
+     `display-mode: standalone`, because a Capacitor WebView matches NEITHER
+     `standalone` NOR `browser` -- measured on Android 15: both media queries
+     false while env(safe-area-inset-top) correctly reported 52px. The gate
+     therefore dropped the padding and the status bar clock sat on the logo.
+     Every other safe-area rule in this project is ungated for the same reason. */
+  height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   padding: 0 var(--space-4);
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 10;
   background: color-mix(in srgb, var(--c-surface) 88%, transparent);
   backdrop-filter: blur(12px);
-}
-@media (display-mode: standalone) {
-  .shell__header {
-    height: calc(var(--header-h) + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-  }
 }
 /* On touch devices the frosted header's backdrop-filter is the known VT/GPU
    troublemaker (already dropped during theme + route transitions). On the real
