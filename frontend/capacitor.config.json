@@ -8,8 +8,7 @@
   },
   "android": {
     "backgroundColor": "#11150f",
-    "appendUserAgent": "ZauberkochApp",
-    "webContentsDebuggingEnabled": true
+    "appendUserAgent": "ZauberkochApp"
   },
   "plugins": {
     "StatusBar": {
