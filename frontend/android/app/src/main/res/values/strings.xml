@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Zauberkoch</string>
+    <string name="title_activity_main">Zauberkoch</string>
+    <string name="package_name">io.celox.zauberkoch</string>
+    <string name="custom_url_scheme">io.celox.zauberkoch</string>
+</resources>

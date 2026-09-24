@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Kein Netz — Zauberkoch</title>
+    <!--
+      Die EINZIGE Seite, die in der App-Hülle steckt. Capacitor zeigt sie über
+      `server.errorPath`, wenn zauberkoch.de nicht erreichbar ist.
+
+      Sie ist bewusst eigenständig: keine Schrift, kein Bild, kein Skript von
+      irgendwo — beim Netzausfall ist per Definition nichts nachladbar. Die
+      Farben sind die Dunkel-Tokens der App (tokens.css), damit der Übergang
+      aus der Splash nicht als Fremdkörper wirkt.
+    -->
+    <style>
+      :root {
+        --surface: #11150f;
+        --on-surface: #e0e5da;
+        --on-variant: #c3c9bb;
+        --primary: #96d98d;
+        --hut: #b1f0b2;
+        --band: #a0cfd3;
+        --funke: #f0b429;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--surface);
+        color: var(--on-surface);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: grid;
+        place-items: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+        text-align: center;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .box { max-width: 24rem; }
+      h1 { font-size: 1.4rem; line-height: 1.25; margin: 1.25rem 0 .5rem; }
+      p { color: var(--on-variant); margin: 0 0 1.75rem; }
+      button {
+        font: inherit;
+        font-weight: 600;
+        color: #11150f;
+        background: var(--primary);
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 28px;
+        min-height: 48px;
+        cursor: pointer;
+      }
+      button:active { transform: scale(.98); }
+      .hinweis { margin-top: 1.5rem; font-size: .85rem; color: var(--on-variant); }
+      /* Der Dampf steigt — ein Lebenszeichen, damit die Seite nicht tot wirkt.
+         Nur transform/opacity, und die Reduziert-Regel schaltet ihn ab. */
+      @keyframes dampf {
+        0%   { opacity: 0; transform: translateY(4px) scaleX(.9); }
+        45%  { opacity: .85; }
+        100% { opacity: 0; transform: translateY(-10px) scaleX(1.15); }
+      }
+      .dampf > * { animation: dampf 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+      .dampf > :nth-child(2) { animation-delay: .5s; }
+      .dampf > :nth-child(3) { animation-delay: 1s; }
+      @media (prefers-reduced-motion: reduce) {
+        .dampf > * { animation: none; opacity: .5; }
+        button:active { transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <!-- Die Kochmütze aus icon.svg, hier eingebettet statt verlinkt. -->
+      <svg width="88" height="88" viewBox="0 0 24 24" role="img" aria-label="Zauberkoch">
+        <g class="dampf" fill="var(--band)" opacity=".9">
+          <ellipse cx="7.6" cy="2.6" rx="1.5" ry="1" />
+          <ellipse cx="12" cy="1.6" rx="1.7" ry="1.1" />
+          <ellipse cx="16.4" cy="2.6" rx="1.5" ry="1" />
+        </g>
+        <g fill="var(--hut)">
+          <circle cx="7.6" cy="8.6" r="3.4" />
+          <circle cx="12" cy="6.6" r="4" />
+          <circle cx="16.4" cy="8.6" r="3.4" />
+          <rect x="6.2" y="10.4" width="11.6" height="6.2" rx="1.2" />
+        </g>
+        <rect x="5.6" y="16" width="12.8" height="3.1" rx="1.2" fill="var(--band)" />
+        <path
+          d="M19.2 3.4 19.6 4.7 20.9 5.1 19.6 5.5 19.2 6.8 18.8 5.5 17.5 5.1 18.8 4.7Z"
+          fill="var(--funke)"
+        />
+      </svg>
+
+      <h1>Der Kessel steht still</h1>
+      <p>
+        Zauberkoch braucht kurz Internet. Prüf die Verbindung — deine Favoriten
+        sind gespeichert und sofort wieder da.
+      </p>
+      <button type="button" onclick="location.reload()">Nochmal versuchen</button>
+      <p class="hinweis" id="hinweis" hidden>Immer noch nichts. Flugmodus an?</p>
+    </div>
+
+    <script>
+      // Kommt das Netz von selbst zurück, lädt die Seite ohne Zutun weiter —
+      // sonst starrt man auf einen Knopf, der längst überflüssig ist.
+      addEventListener('online', () => location.reload());
+      // Ein zweiter vergeblicher Versuch verdient einen ehrlicheren Hinweis.
+      addEventListener('DOMContentLoaded', () => {
+        try {
+          const n = Number(sessionStorage.getItem('zk-offline-versuche') || 0) + 1;
+          sessionStorage.setItem('zk-offline-versuche', String(n));
+          if (n > 1) document.getElementById('hinweis').hidden = false;
+        } catch (e) { /* privater Modus: dann eben ohne Zähler */ }
+      });
+    </script>
+  </body>
+</html>

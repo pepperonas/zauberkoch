@@ -35,3 +35,20 @@ CLAUDE.local.md
 .idea/
 .vscode/
 .playwright-mcp/
+
+# Android-Huelle: Signaturmaterial gehoert NUR ins private Repo
+# pepperonas/keystore und in die GitHub-Secrets — niemals hierher.
+*.jks
+*.keystore
+keystore.properties
+frontend/android/local.properties
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/app/src/main/assets/capacitor.plugins.json
+frontend/android/app/src/main/res/xml/config.xml
+# Release-APKs werden BEWUSST eingecheckt (Nutzerwunsch 2026-09-24) —
+# deshalb hier KEIN *.apk. Der Ausnahmepfad ist frontend/android/app/release/.

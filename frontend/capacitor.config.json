@@ -1,0 +1,33 @@
+{
+  "appId": "io.celox.zauberkoch",
+  "appName": "Zauberkoch",
+  "webDir": "native/www",
+  "server": {
+    "url": "https://zauberkoch.de/?native=1",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "backgroundColor": "#11150f",
+    "appendUserAgent": "ZauberkochApp",
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#11150f"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_zk",
+      "iconColor": "#b1f0b2"
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 600,
+      "backgroundColor": "#11150f",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    }
+  }
+}
